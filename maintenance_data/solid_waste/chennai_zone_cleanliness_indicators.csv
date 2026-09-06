@@ -1,0 +1,16 @@
+zone_no,zone_name,cleanliness_score_100,source_segregation_pct,door_to_door_coverage_pct,littering_vulnerability_index,drain_garbage_dumping_risk,open_dumps_eliminated_pct,slum_sanitation_score_100,notes
+1,Thiruvottiyur,52.4,42.0,91.0,High,High,78.0,46.0,Coastal/industrial fringes; garbage dumping in storm channels near Ennore express way
+2,Manali,48.2,38.0,88.0,Very High,Critical,70.0,42.0,Industrial petrochemical corridor; narrow drains choked with industrial/plastic scrap
+3,Madhavaram,56.0,46.0,92.0,Medium,High,82.0,51.0,High truck terminal volume; market waste spillover into arterial culverts
+4,Tondiarpet,44.5,35.0,94.0,Critical,Critical,65.0,38.0,High population density; heavy drain blockage in Buckingham canal culverts
+5,Royapuram,42.0,32.0,95.0,Critical,Critical,62.0,35.0,Commercial wholesale markets (George Town/Parrys); major vegetable/packaging waste in drains
+6,Thiru-Vi-Ka Nagar,46.8,36.0,93.0,High,Critical,68.0,40.0,Otteri Nullah watershed; severe pre-monsoon garbage accumulation
+7,Ambattur,63.5,58.0,96.0,Medium,Medium,86.0,59.0,Mixed industrial/residential; estate drainage choked with solid waste near Padi
+8,Anna Nagar,72.4,69.0,98.0,Low,Low,94.0,71.0,Well-planned residential layouts; systematic Urbaser/GCC primary collection
+9,Teynampet,68.2,64.0,97.0,High,High,91.0,66.0,T. Nagar retail/commercial hub; street hawker packaging waste often washes into catch pits
+10,Kodambakkam,65.0,61.0,96.0,Medium,High,89.0,62.0,High commercial density along Arcot Rd; Mambalam canal silt and plastic blockages
+11,Valasaravakkam,61.2,54.0,94.0,Medium,Medium,85.0,58.0,Suburban expansion; Virugambakkam canal encroachment and silt accumulation
+12,Alandur,66.4,62.0,95.0,Medium,Medium,90.0,64.0,Adyar river buffer; moderate collection efficiency
+13,Adyar,76.8,74.0,98.0,Low,Low,96.0,76.0,High citizen compliance; highest source segregation rate in Chennai
+14,Perungudi,58.4,50.0,92.0,High,High,80.0,52.0,Adjoining Perungudi dumpyard and Pallikaranai marsh; plastic fly-off and drain blockages
+15,Sholinganallur,64.0,59.0,93.0,Medium,Medium,87.0,60.0,OMR IT corridor; rapid real estate development; construction debris in open drains

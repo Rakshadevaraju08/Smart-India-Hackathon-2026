@@ -1,0 +1,21 @@
+substation_id,name,voltage_kv,type,latitude,longitude,zone_name,elevation_m,plinth_level_cm,flood_risk_level,criticality,consumer_coverage,source
+SS-001,Mylapore Substation,230/110/33,AIS,13.0384,80.2612,Teynampet,7.5,60,Medium,Tier-1 Grid,Mylapore Mandaveli Santhome,TANGEDCO Grid Directory
+SS-002,T. Nagar Substation,110/33/11,GIS,13.0415,80.2356,Teynampet,6.2,85,High,Tier-2 Urban,T. Nagar Pondy Bazaar Mambalam,TANGEDCO Central Circle
+SS-003,Alandur Substation,230/110,AIS,13.0012,80.2054,Alandur,11.0,75,Low,Tier-1 Grid,Alandur Guindy Airport Corridor,TANGEDCO South Circle
+SS-004,Guindy Substation,230/110,AIS,13.0124,80.2115,Alandur,8.5,70,Medium,Tier-1 Grid,Guindy Industrial Estate Ekkatuthangal,TANGEDCO Industrial Circle
+SS-005,Velachery Substation,110/33,AIS,12.9782,80.2214,Adyar,4.8,45,Critical,Tier-2 Urban,Velachery Taramani Vijayanagar,TANGEDCO South Circle
+SS-006,Koyambedu Substation,230/110,GIS,13.0712,80.1945,Anna Nagar,9.2,80,Medium,Tier-1 Grid,Koyambedu Market Metro CMBT,TANGEDCO West Circle
+SS-007,Anna Nagar Substation,110/33,AIS,13.0845,80.2185,Anna Nagar,12.5,70,Low,Tier-2 Urban,Anna Nagar East & West Shenoy Nagar,TANGEDCO West Circle
+SS-008,Manali Substation,230/110,AIS,13.1672,80.2581,Manali,3.5,40,Critical,Tier-1 Grid,CPCL Petrochemical Refinery Zone,TANGEDCO North Circle
+SS-009,Tondiarpet Substation,110/33,AIS,13.1250,80.2865,Tondiarpet,4.2,50,High,Tier-2 Urban,Tondiarpet Washermanpet Harbour,TANGEDCO North Circle
+SS-010,Royapuram Substation,110/33,GIS,13.1085,80.2921,Royapuram,5.0,75,Medium,Tier-2 Urban,Royapuram Port Commercial Zone,TANGEDCO North Circle
+SS-011,Kilpauk Substation,110/33,AIS,13.0815,80.2432,Anna Nagar,8.0,65,Medium,Tier-2 Urban,KMC Hospital Chetpet Kellys,TANGEDCO Central Circle
+SS-012,Adyar Substation,110/33,GIS,12.9985,80.2541,Adyar,6.0,80,Low,Tier-2 Urban,Adyar Besant Nagar Gandhinagar,TANGEDCO South Circle
+SS-013,Perungudi Substation,230/110,AIS,12.9620,80.2415,Perungudi,3.8,45,Critical,Tier-1 Grid,OMR IT Expressway Kandanchavadi,TANGEDCO South Circle
+SS-014,Sholinganallur Substation,230/110,GIS,12.9015,80.2285,Sholinganallur,5.5,80,High,Tier-1 Grid,Sholinganallur IT SEZ Medavakkam,TANGEDCO South Circle
+SS-015,Ambattur Substation,230/110,AIS,13.1025,80.1654,Ambattur,15.2,70,Low,Tier-1 Grid,Ambattur Industrial Estate Auto Hub,TANGEDCO West Circle
+SS-016,Madhavaram Substation,110/33,AIS,13.1480,80.2312,Madhavaram,8.8,60,Medium,Tier-2 Urban,Madhavaram Milk Colony Truck Terminal,TANGEDCO North Circle
+SS-017,Porur Substation,230/110,AIS,13.0354,80.1582,Valasaravakkam,14.0,70,Low,Tier-1 Grid,Porur Ramachandra Hospital Iyyappanthangal,TANGEDCO South-West Circle
+SS-018,Kodambakkam Substation,110/33,AIS,13.0512,80.2245,Kodambakkam,7.8,65,Medium,Tier-2 Urban,Kodambakkam Ashok Nagar West Mambalam,TANGEDCO Central Circle
+SS-019,Pallavaram Substation,110/33,AIS,12.9721,80.1458,Alandur,13.5,65,Low,Tier-2 Urban,Pallavaram Chromepet GST Hub,TANGEDCO South Circle
+SS-020,Ennore 400kV Grid Substation,400/230,AIS,13.2085,80.3120,Thiruvottiyur,2.8,90,High,Major Super Grid,North Chennai Power Station & Port,TANGEDCO State Load Despatch Center

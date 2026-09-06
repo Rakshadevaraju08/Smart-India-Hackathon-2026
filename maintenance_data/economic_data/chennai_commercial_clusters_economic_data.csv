@@ -1,0 +1,13 @@
+cluster_id,cluster_name,zone_no,primary_category,latitude,longitude,commercial_units_est,avg_daily_turnover_inr_cr,floor_exposure_type,economic_flood_vulnerability,critical_asset_risk
+COMM-01,T. Nagar (Pondy Bazaar / Ranganathan St),9,Retail & Textiles & Jewellery,13.0418,80.2341,12500,95.0,Ground Floor / Basements,Critical,High-value inventory (silk sarees gold electronics)
+COMM-02,George Town / Parrys / Flower Bazaar,5,Wholesale Trade & Hardware,13.0890,80.2865,18200,120.0,Narrow Basements & Ground Shops,Critical,Bulk commodities electrical pharmaceuticals
+COMM-03,OMR IT Corridor (Tidel to Sholinganallur),13 14 15,IT/ITES & Software Parks,12.9860,80.2450,4800,240.0,Underground Server Rooms & Basement Parking,High,Workforce transit disruption & data server damage
+COMM-04,Guindy Industrial Estate,12,Manufacturing & Auto Ancillaries,13.0110,80.2100,2400,65.0,Ground Level Shop Floors,Critical,Heavy CNC machinery raw metal stock
+COMM-05,Ambattur Industrial Estate,7,Small Scale Industry & Engineering,13.1015,80.1640,3800,78.0,Factory Shed Floors,High,Precision tooling metal stamping textile units
+COMM-06,Koyambedu Wholesale Market Complex (KWMC),8,Perishable Vegetables Fruit Flower,13.0695,80.1920,3500,45.0,Open Ground Stalls & Godowns,Critical,Perishable food supply chain breakdown for metro
+COMM-07,Anna Nagar 2nd Avenue Commercial Belt,8,Premium Retail & Food/Hospitality,13.0850,80.2150,4200,38.0,Ground Level Showrooms & Cafes,Medium,Commercial decor electronics luxury goods
+COMM-08,Velachery Commercial Hub & Malls,13,Shopping Malls & Auto Showrooms,12.9830,80.2190,2900,42.0,Mall Basements & Ground Showrooms,Critical,Submerged vehicle inventories & mall retail stock
+COMM-09,Mylapore Luz Corner & Kutchery Road,9,Traditional Retail & Banking,13.0375,80.2620,3600,28.0,Street Edge Shops,Medium,Financial branches gold apparel handicrafts
+COMM-10,Kilpauk Medical & Diagnostics Corridor,8,Healthcare Diagnostic & Pharmacies,13.0805,80.2410,1850,32.0,Basement Labs & Ground Pharmacies,High,Medical cold-chain reagents & diagnostic machines
+COMM-11,Purawalkam High Road,5,Textiles Footwear & Consumer Goods,13.0885,80.2575,3100,26.0,Street Frontage Commercial,High,Footwear apparel home appliance damage
+COMM-12,Adyar MG Road & Sardar Patel Road,13,Retail Banking & Educational Ancillary,13.0040,80.2560,2650,24.0,Ground Commercial,Low,General retail and educational services

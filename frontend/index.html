@@ -94,114 +94,121 @@
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden select-none">
 
   <!-- TOP APP BAR -->
-  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 py-2.5 flex items-center justify-between z-20 shrink-0">
-    <div class="flex items-center gap-3">
-      <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-600 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-        <i data-lucide="waves" class="w-5 h-5 text-white"></i>
+  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between z-20 shrink-0 gap-2">
+    <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+      <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-tr from-cyan-600 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+        <i data-lucide="waves" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
       </div>
       <div>
-        <div class="flex items-center gap-2">
-          <h1 class="font-bold text-base tracking-wide text-white flex items-center gap-2">
-            KAIROS COMMAND TWIN
-            <span class="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">MoES / NCMRWF Pilot</span>
+        <div class="flex items-center gap-1.5 sm:gap-2">
+          <h1 class="font-bold text-sm sm:text-base tracking-wide text-white flex items-center gap-1.5 sm:gap-2">
+            KAIROS <span class="hidden xs:inline">COMMAND TWIN</span>
+            <span class="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest px-1.5 sm:px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">MoES Pilot</span>
           </h1>
-          <span class="text-xs text-slate-400 hidden md:inline">| Urban Flood Nowcasting System (SIH 2026 #26085)</span>
+          <span class="text-xs text-slate-400 hidden lg:inline">| Urban Flood Nowcasting System (SIH 2026 #26085)</span>
         </div>
-        <p class="text-xs text-slate-400">Greater Chennai Corporation (GCC) — 7,894 Street Segments Calibrated</p>
+        <p class="text-[11px] text-slate-400 hidden md:block">Greater Chennai Corporation (GCC) — 7,894 Street Segments Calibrated</p>
       </div>
     </div>
 
     <!-- Live Telemetry Badges & Controls -->
-    <div class="flex items-center gap-2.5">
-      <div class="hidden lg:flex items-center gap-2 bg-slate-800/80 border border-slate-700/60 rounded-lg px-3 py-1 text-xs">
+    <div class="flex items-center gap-1.5 sm:gap-2.5">
+      <div class="hidden xl:flex items-center gap-2 bg-slate-800/80 border border-slate-700/60 rounded-lg px-3 py-1 text-xs">
         <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
         <span class="text-slate-300 font-medium">IMD DWR Meenambakkam:</span>
         <span class="text-cyan-400 font-mono font-semibold">10-Min Dual-Pol Scan</span>
       </div>
 
       <!-- Storm Scenario Selector -->
-      <div class="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/60 rounded-lg p-1 text-xs">
-        <span class="text-slate-400 px-2 font-medium">Storm:</span>
-        <select id="scenario-select" class="bg-slate-900 text-slate-200 border border-slate-700 rounded px-2 py-1 focus:outline-none focus:border-cyan-500 font-medium">
-          <option value="michaung">Cyclone Michaung (95 mm/h Peak)</option>
-          <option value="monsoon">Heavy Monsoon (40 mm/h)</option>
-          <option value="moderate">Convective Cell (20 mm/h)</option>
+      <div class="flex items-center gap-1 bg-slate-800/80 border border-slate-700/60 rounded-lg p-0.5 sm:p-1 text-xs">
+        <span class="text-slate-400 px-1 sm:px-2 font-medium text-[11px] hidden sm:inline">Storm:</span>
+        <select id="scenario-select" class="bg-slate-900 text-slate-200 border border-slate-700 rounded px-1.5 sm:px-2 py-1 focus:outline-none focus:border-cyan-500 font-medium text-[11px] sm:text-xs max-w-[110px] sm:max-w-none truncate">
+          <option value="michaung">Michaung (95 mm/h)</option>
+          <option value="monsoon">Monsoon (40 mm/h)</option>
+          <option value="moderate">Convective (20 mm/h)</option>
         </select>
       </div>
 
       <!-- Center View Reset -->
-      <button id="reset-view-btn" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition" title="Center on Chennai Metropolitan Core">
+      <button id="reset-view-btn" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 sm:gap-1.5 transition" title="Center on Chennai Metropolitan Core">
         <i data-lucide="crosshair" class="w-3.5 h-3.5 text-cyan-400"></i>
-        <span class="hidden sm:inline">Center Chennai</span>
+        <span class="hidden sm:inline">Center</span>
       </button>
 
       <!-- Bolt.new Cloud Export Modal Trigger -->
-      <button id="export-bolt-btn" class="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow-lg shadow-amber-500/20 transition">
+      <button id="export-bolt-btn" class="hidden md:flex bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs items-center gap-1.5 shadow-lg shadow-amber-500/20 transition">
         <i data-lucide="zap" class="w-3.5 h-3.5 fill-current"></i>
-        <span>Bolt.new Export</span>
+        <span>Bolt.new</span>
+      </button>
+
+      <!-- Mobile Dock Toggle Button -->
+      <button id="mobile-dock-toggle-btn" class="lg:hidden bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/25 active:scale-95 transition" title="Open Controls & Diagnostic Panel">
+        <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+        <span>Panel</span>
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
       </button>
     </div>
   </header>
 
   <!-- EXECUTIVE KPI METRICS BAR -->
-  <section class="bg-slate-900/60 border-b border-slate-800/80 px-4 py-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs shrink-0">
-    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-3">
-      <div class="p-2 rounded bg-red-500/10 border border-red-500/20 text-red-400">
-        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+  <section class="bg-slate-900/60 border-b border-slate-800/80 px-2 sm:px-4 py-1.5 sm:py-2 flex lg:grid lg:grid-cols-6 gap-2 sm:gap-3 text-xs shrink-0 overflow-x-auto no-scrollbar scroll-smooth">
+    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[175px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
+      <div class="p-1.5 sm:p-2 rounded bg-red-500/10 border border-red-500/20 text-red-400 shrink-0">
+        <i data-lucide="alert-triangle" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
       </div>
       <div>
-        <div class="text-[11px] text-slate-400 font-medium">Inundated Roads</div>
-        <div id="kpi-inundated" class="text-base font-bold text-red-400 font-mono">-- Segments</div>
+        <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Inundated Roads</div>
+        <div id="kpi-inundated" class="text-sm sm:text-base font-bold text-red-400 font-mono">-- Segments</div>
       </div>
     </div>
 
-    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-3">
-      <div class="p-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400">
-        <i data-lucide="activity" class="w-4 h-4"></i>
+    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[175px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
+      <div class="p-1.5 sm:p-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
+        <i data-lucide="activity" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
       </div>
       <div>
-        <div class="text-[11px] text-slate-400 font-medium">Surcharging Manholes</div>
-        <div id="kpi-manholes" class="text-base font-bold text-amber-400 font-mono">-- Nodes (HGL &gt; Z)</div>
+        <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Surcharging Manholes</div>
+        <div id="kpi-manholes" class="text-sm sm:text-base font-bold text-amber-400 font-mono">-- Nodes</div>
       </div>
     </div>
 
-    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-3">
-      <div class="p-2 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400">
-        <i data-lucide="zap" class="w-4 h-4"></i>
+    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[175px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
+      <div class="p-1.5 sm:p-2 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 shrink-0">
+        <i data-lucide="zap" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
       </div>
       <div>
-        <div class="text-[11px] text-slate-400 font-medium">Substation Hazard</div>
-        <div id="kpi-substations" class="text-base font-bold text-purple-400 font-mono">-- at Plinth Risk</div>
+        <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Substation Hazard</div>
+        <div id="kpi-substations" class="text-sm sm:text-base font-bold text-purple-400 font-mono">-- Plinth Risk</div>
       </div>
     </div>
 
-    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-3">
-      <div class="p-2 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
-        <i data-lucide="cloud-rain" class="w-4 h-4"></i>
+    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[175px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
+      <div class="p-1.5 sm:p-2 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shrink-0">
+        <i data-lucide="cloud-rain" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
       </div>
       <div>
-        <div class="text-[11px] text-slate-400 font-medium">Peak Rainfall Rate</div>
-        <div id="kpi-rainfall" class="text-base font-bold text-cyan-400 font-mono">-- mm/hr</div>
+        <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Peak Rainfall Rate</div>
+        <div id="kpi-rainfall" class="text-sm sm:text-base font-bold text-cyan-400 font-mono">-- mm/hr</div>
       </div>
     </div>
 
-    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-3">
-      <div class="p-2 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400">
-        <i data-lucide="gauge" class="w-4 h-4"></i>
+    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[175px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
+      <div class="p-1.5 sm:p-2 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 shrink-0">
+        <i data-lucide="gauge" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
       </div>
       <div>
-        <div class="text-[11px] text-slate-400 font-medium">Max Water Depth</div>
-        <div id="kpi-max-depth" class="text-base font-bold text-rose-400 font-mono">-- cm</div>
+        <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Max Water Depth</div>
+        <div id="kpi-max-depth" class="text-sm sm:text-base font-bold text-rose-400 font-mono">-- cm</div>
       </div>
     </div>
 
-    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-3">
-      <div class="p-2 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-        <i data-lucide="shield-check" class="w-4 h-4"></i>
+    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[175px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
+      <div class="p-1.5 sm:p-2 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0">
+        <i data-lucide="shield-check" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
       </div>
       <div>
-        <div class="text-[11px] text-slate-400 font-medium">A* Safe Evacuation</div>
-        <div id="kpi-safe-route" class="text-base font-bold text-emerald-400 font-mono">100% Operational</div>
+        <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">A* Safe Evacuation</div>
+        <div id="kpi-safe-route" class="text-sm sm:text-base font-bold text-emerald-400 font-mono">100% Operational</div>
       </div>
     </div>
   </section>
@@ -214,82 +221,105 @@
       <div id="map" class="w-full h-full z-0"></div>
 
       <!-- MAP FLOATING LEGEND -->
-      <div class="absolute top-4 left-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-lg p-3 text-xs shadow-2xl max-w-xs">
-        <div class="font-bold text-slate-200 mb-2 flex items-center justify-between">
-          <span class="flex items-center gap-1.5">
-            <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
-            Flood Severity Classification
+      <div id="map-legend" class="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-lg p-2.5 sm:p-3 text-xs shadow-2xl max-w-[210px] sm:max-w-xs transition-all">
+        <div class="font-bold text-slate-200 flex items-center justify-between">
+          <span class="flex items-center gap-1.5 text-[11px] sm:text-xs">
+            <i data-lucide="layers" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400"></i>
+            Flood Severity
           </span>
-          <span class="text-[10px] text-slate-400 font-mono">CPHEEO/NDMA</span>
-        </div>
-        <div class="space-y-1.5">
-          <div class="flex items-center justify-between">
-            <span class="flex items-center gap-2">
-              <span class="w-3 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
-              <span class="text-slate-300">Passable (&lt; 10 cm)</span>
-            </span>
-            <span class="text-[10px] text-emerald-400 font-mono">All Vehicles</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="flex items-center gap-2">
-              <span class="w-3 h-1.5 rounded-full bg-amber-400 inline-block"></span>
-              <span class="text-slate-300">Caution (10–25 cm)</span>
-            </span>
-            <span class="text-[10px] text-amber-400 font-mono">2-Wheeler Risk</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="flex items-center gap-2">
-              <span class="w-3 h-1.5 rounded-full bg-orange-500 inline-block"></span>
-              <span class="text-slate-300">Severe (25–50 cm)</span>
-            </span>
-            <span class="text-[10px] text-orange-400 font-mono">Buses / Trucks Only</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="flex items-center gap-2">
-              <span class="w-3 h-1.5 rounded-full bg-red-600 inline-block"></span>
-              <span class="text-slate-300">Critical (&gt; 50 cm)</span>
-            </span>
-            <span class="text-[10px] text-red-400 font-mono">Submerged Impasse</span>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] sm:text-[10px] text-slate-400 font-mono hidden xs:inline">NDMA</span>
+            <button id="legend-toggle-btn" class="sm:hidden text-slate-400 hover:text-white p-0.5 rounded" title="Toggle Legend Details">
+              <i data-lucide="chevron-down" id="legend-chevron" class="w-3.5 h-3.5"></i>
+            </button>
           </div>
         </div>
+        
+        <div id="legend-body" class="hidden sm:block space-y-1.5 mt-2">
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <span class="w-2.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+              <span class="text-slate-300">&lt; 10 cm</span>
+            </span>
+            <span class="text-[10px] text-emerald-400 font-mono">Passable</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <span class="w-2.5 h-1.5 rounded-full bg-amber-400 inline-block"></span>
+              <span class="text-slate-300">10–25 cm</span>
+            </span>
+            <span class="text-[10px] text-amber-400 font-mono">Caution</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <span class="w-2.5 h-1.5 rounded-full bg-orange-500 inline-block"></span>
+              <span class="text-slate-300">25–50 cm</span>
+            </span>
+            <span class="text-[10px] text-orange-400 font-mono">Severe</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <span class="w-2.5 h-1.5 rounded-full bg-red-600 inline-block"></span>
+              <span class="text-slate-300">&gt; 50 cm</span>
+            </span>
+            <span class="text-[10px] text-red-400 font-mono">Critical</span>
+          </div>
 
-        <div class="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px]">
-          <span class="flex items-center gap-1.5 text-slate-300">
-            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping inline-block"></span>
-            Surcharging Manhole
-          </span>
-          <span class="text-slate-400 font-mono text-[10px]">HGL &gt; Ground (Fountain)</span>
+          <div class="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] sm:text-[11px]">
+            <span class="flex items-center gap-1 text-slate-300">
+              <span class="w-2 h-2 rounded-full bg-red-500 animate-ping inline-block"></span>
+              Surcharge Node
+            </span>
+            <span class="text-slate-400 font-mono text-[9px]">Fountain</span>
+          </div>
         </div>
       </div>
 
       <!-- MAP CONTROLS OVERLAY (Top Right) -->
-      <div class="absolute top-4 right-4 z-10 flex flex-col gap-2">
-        <div class="bg-slate-900/90 backdrop-blur border border-slate-800 rounded-lg p-1.5 flex flex-col gap-1 text-xs shadow-xl">
-          <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
-            <input type="checkbox" id="toggle-roads" checked class="accent-cyan-500 rounded">
-            <span class="text-slate-200">Road Inundation (521 Segments)</span>
+      <div class="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 flex flex-col gap-2">
+        <div class="bg-slate-900/90 backdrop-blur border border-slate-800 rounded-lg p-1 sm:p-1.5 flex flex-col gap-0.5 sm:gap-1 text-[10px] sm:text-xs shadow-xl">
+          <label class="flex items-center gap-1.5 sm:gap-2 px-1.5 py-1 rounded hover:bg-slate-800 cursor-pointer">
+            <input type="checkbox" id="toggle-roads" checked class="accent-cyan-500 rounded scale-90 sm:scale-100">
+            <span class="text-slate-200">Road Inundation</span>
           </label>
-          <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
-            <input type="checkbox" id="toggle-manholes" checked class="accent-red-500 rounded">
-            <span class="text-slate-200">Surcharging Manholes (25 Hotspots)</span>
+          <label class="flex items-center gap-1.5 sm:gap-2 px-1.5 py-1 rounded hover:bg-slate-800 cursor-pointer">
+            <input type="checkbox" id="toggle-manholes" checked class="accent-red-500 rounded scale-90 sm:scale-100">
+            <span class="text-slate-200">Manholes (25)</span>
           </label>
-          <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
-            <input type="checkbox" id="toggle-substations" checked class="accent-purple-500 rounded">
-            <span class="text-slate-200">TANGEDCO Substations (20 Grid)</span>
+          <label class="flex items-center gap-1.5 sm:gap-2 px-1.5 py-1 rounded hover:bg-slate-800 cursor-pointer">
+            <input type="checkbox" id="toggle-substations" checked class="accent-purple-500 rounded scale-90 sm:scale-100">
+            <span class="text-slate-200">Substations (20)</span>
           </label>
-          <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
-            <input type="checkbox" id="toggle-routing" checked class="accent-emerald-500 rounded">
-            <span class="text-slate-200">A* Emergency Evacuation Route</span>
+          <label class="flex items-center gap-1.5 sm:gap-2 px-1.5 py-1 rounded hover:bg-slate-800 cursor-pointer">
+            <input type="checkbox" id="toggle-routing" checked class="accent-emerald-500 rounded scale-90 sm:scale-100">
+            <span class="text-slate-200">A* Evacuation</span>
           </label>
         </div>
       </div>
     </div>
 
+    <!-- MOBILE BACKDROP OVERLAY -->
+    <div id="mobile-dock-backdrop" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-30 hidden lg:hidden transition-opacity duration-300"></div>
+
     <!-- RIGHT INTELLIGENCE & CONTROL DOCK -->
-    <aside class="w-96 bg-slate-900 border-l border-slate-800 flex flex-col z-10 shadow-2xl">
+    <aside id="intelligence-dock" class="fixed lg:static inset-x-0 bottom-0 top-auto h-[78vh] max-h-[580px] lg:h-auto lg:w-96 w-full bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-700 lg:border-slate-800 flex flex-col z-40 shadow-2xl transition-transform duration-300 ease-in-out transform translate-y-full lg:translate-y-0 rounded-t-2xl lg:rounded-none">
       
+      <!-- MOBILE DRAWER HANDLE & HEADER -->
+      <div class="lg:hidden flex items-center justify-between px-4 py-2.5 bg-slate-950 border-b border-slate-800 rounded-t-2xl shrink-0">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-1 rounded-full bg-slate-700 mx-auto -mt-1 mb-1 absolute left-1/2 -translate-x-1/2 top-2"></div>
+          <span class="font-bold text-xs text-cyan-400 flex items-center gap-1.5 mt-0.5">
+            <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+            Kairos Intelligence &amp; Controls
+          </span>
+        </div>
+        <button id="mobile-dock-close-btn" class="p-1 rounded bg-slate-800 text-slate-300 hover:text-white mt-0.5" title="Close Drawer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
       <!-- DOCK NAVIGATION TABS -->
-      <div class="flex border-b border-slate-800 bg-slate-950/60 p-1 text-xs font-medium">
+      <div class="flex border-b border-slate-800 bg-slate-950/60 p-1 text-xs font-medium shrink-0">
         <button id="tab-routing-btn" class="flex-1 py-2 rounded text-center transition flex items-center justify-center gap-1.5 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30">
           <i data-lucide="navigation-2" class="w-3.5 h-3.5"></i>
           <span>A* Safe Route</span>
@@ -541,35 +571,43 @@
   </main>
 
   <!-- BOTTOM DOCK: 0-180 MINUTE TIME SLIDER & PLAYBACK -->
-  <footer class="bg-slate-900/95 backdrop-blur border-t border-slate-800 px-6 py-3 flex items-center gap-6 z-20 shrink-0">
+  <footer class="bg-slate-900/95 backdrop-blur border-t border-slate-800 px-3 sm:px-6 py-2 sm:py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-6 z-20 shrink-0">
     
-    <!-- Playback Controls -->
-    <div class="flex items-center gap-2">
-      <button id="play-pause-btn" class="w-10 h-10 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white flex items-center justify-center transition shadow-lg shadow-cyan-600/30">
-        <i data-lucide="play" class="w-5 h-5 ml-0.5" id="play-icon"></i>
-      </button>
-      <button id="reset-time-btn" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 flex items-center justify-center transition" title="Reset to T+0 (Now)">
-        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-      </button>
-    </div>
-
-    <!-- Active Time Display -->
-    <div class="shrink-0 w-32">
-      <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Nowcast Horizon</div>
-      <div class="flex items-baseline gap-1.5">
-        <span id="time-display" class="text-xl font-bold font-mono text-cyan-400">T + 60m</span>
-        <span id="time-clock" class="text-xs text-slate-400 font-mono">(19:40 IST)</span>
+    <!-- Top row on mobile / Left group on desktop: Playback Controls & Time Display -->
+    <div class="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-4 shrink-0">
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <button id="play-pause-btn" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white flex items-center justify-center transition shadow-lg shadow-cyan-600/30">
+          <i data-lucide="play" class="w-4 h-4 sm:w-5 sm:h-5 ml-0.5" id="play-icon"></i>
+        </button>
+        <button id="reset-time-btn" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 flex items-center justify-center transition" title="Reset to T+0 (Now)">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+        </button>
       </div>
+
+      <!-- Active Time Display -->
+      <div class="shrink-0 flex items-baseline gap-1.5 sm:block sm:w-32">
+        <div class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold tracking-wider hidden sm:block">Nowcast Horizon</div>
+        <div class="flex items-baseline gap-1.5">
+          <span id="time-display" class="text-base sm:text-xl font-bold font-mono text-cyan-400">T + 60m</span>
+          <span id="time-clock" class="text-[10px] sm:text-xs text-slate-400 font-mono">(19:40 IST)</span>
+        </div>
+      </div>
+
+      <!-- Quick Drawer Trigger on Mobile -->
+      <button id="mobile-dock-toggle-btn-bottom" class="sm:hidden text-cyan-400 text-[11px] font-bold flex items-center gap-1 bg-cyan-500/10 px-2 py-1 rounded border border-cyan-500/20 active:bg-cyan-500/20 transition">
+        <i data-lucide="sliders" class="w-3 h-3"></i>
+        <span>Details</span>
+      </button>
     </div>
 
     <!-- Slider Track & Dynamic Hyetograph Mini-Sparkline (R3) -->
     <div class="flex-1 space-y-1">
-      <div class="flex justify-between items-center text-[11px] font-mono font-medium text-slate-400 px-1">
-        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="0">T+0 (Now)</span>
+      <div class="flex justify-between items-center text-[10px] sm:text-[11px] font-mono font-medium text-slate-400 px-1">
+        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="0">T+0</span>
         <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="1">T+30m</span>
         <span class="hover:text-cyan-400 cursor-pointer step-tick text-cyan-400 font-bold" data-step="2">T+60m</span>
-        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="3">T+90m (Peak)</span>
-        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="4">T+120m</span>
+        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="3">T+90m</span>
+        <span class="hover:text-cyan-400 cursor-pointer step-tick hidden xs:inline" data-step="4">T+120m</span>
         <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="5">T+180m</span>
       </div>
 
@@ -1442,6 +1480,58 @@ Use modular, modern React component architecture with clean separation between G
       });
     });
 
+    // Mobile Drawer & Legend Handlers
+    const intelDock = document.getElementById('intelligence-dock');
+    const mobileBackdrop = document.getElementById('mobile-dock-backdrop');
+    const mobileToggleBtn = document.getElementById('mobile-dock-toggle-btn');
+    const mobileToggleBottom = document.getElementById('mobile-dock-toggle-btn-bottom');
+    const mobileCloseBtn = document.getElementById('mobile-dock-close-btn');
+
+    function openMobileDock() {
+      if (intelDock) intelDock.classList.remove('translate-y-full');
+      if (mobileBackdrop) mobileBackdrop.classList.remove('hidden');
+    }
+
+    function closeMobileDock() {
+      if (intelDock) intelDock.classList.add('translate-y-full');
+      if (mobileBackdrop) mobileBackdrop.classList.add('hidden');
+    }
+
+    if (mobileToggleBtn) mobileToggleBtn.addEventListener('click', openMobileDock);
+    if (mobileToggleBottom) mobileToggleBottom.addEventListener('click', openMobileDock);
+    if (mobileCloseBtn) mobileCloseBtn.addEventListener('click', closeMobileDock);
+    if (mobileBackdrop) mobileBackdrop.addEventListener('click', closeMobileDock);
+
+    // Mobile Legend Toggle
+    const legendToggleBtn = document.getElementById('legend-toggle-btn');
+    const legendBody = document.getElementById('legend-body');
+    const legendChevron = document.getElementById('legend-chevron');
+
+    if (legendToggleBtn && legendBody) {
+      legendToggleBtn.addEventListener('click', () => {
+        const isHidden = legendBody.classList.contains('hidden');
+        if (isHidden) {
+          legendBody.classList.remove('hidden');
+          if (legendChevron) legendChevron.setAttribute('data-lucide', 'chevron-up');
+        } else {
+          legendBody.classList.add('hidden');
+          if (legendChevron) legendChevron.setAttribute('data-lucide', 'chevron-down');
+        }
+        if (window.lucide) lucide.createIcons();
+      });
+    }
+
+    // Auto-open diagnostic drawer on mobile when an asset is clicked
+    const origRefresh = refreshActiveAssetDiagnostic;
+    refreshActiveAssetDiagnostic = function() {
+      origRefresh();
+      if (window.innerWidth < 1024 && state.selectedAsset) {
+        openMobileDock();
+        const inspBtn = document.getElementById('tab-inspector-btn');
+        if (inspBtn) inspBtn.click();
+      }
+    };
+
     // Initial Application Bootstrap
     initRoadSegments();
     setTimeStep(2); // T+60m default initial view
@@ -1451,7 +1541,7 @@ Use modular, modern React component architecture with clean separation between G
     // Default select initial asset for inspector
     if (window.CHENNAI_FLOOD_DATA && window.CHENNAI_FLOOD_DATA.segments && window.CHENNAI_FLOOD_DATA.segments.length > 0) {
       state.selectedAsset = { type: 'segment', data: window.CHENNAI_FLOOD_DATA.segments[0] };
-      refreshActiveAssetDiagnostic();
+      origRefresh();
     }
   </script>
 </body>

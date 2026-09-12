@@ -75,3 +75,7 @@ Datasets/**/*.MHT
 # Environment secrets
 .env
 .env.local
+
+# Agent logs
+.agents/
+

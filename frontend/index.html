@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kairos Command Twin - Urban Flood Nowcasting System (SIH 2026)</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Leaflet CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    @keyframes pulse-ring {
+      0% { transform: scale(0.6); opacity: 0.9; }
+      100% { transform: scale(2.4); opacity: 0; }
+    }
+    .pulsing-manhole {
+      position: relative;
+    }
+    .pulsing-manhole::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      border-radius: 50%;
+      background: rgba(239, 68, 68, 0.7);
+      animation: pulse-ring 1.6s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    /* Custom dark scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    
+    .leaflet-container {
+      background-color: #0b0f19 !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden select-none">
+
+  <!-- TOP APP BAR -->
+  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 px-4 py-2.5 flex items-center justify-between z-20 shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-600 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+        <i data-lucide="waves" class="w-5 h-5 text-white"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-base tracking-wide text-white flex items-center gap-2">
+            KAIROS COMMAND TWIN
+            <span class="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">MoES / NCMRWF Pilot</span>
+          </h1>
+          <span class="text-xs text-slate-400 hidden md:inline">| Urban Flood Nowcasting System (SIH 2026 #26085)</span>
+        </div>
+        <p class="text-xs text-slate-400">Greater Chennai Corporation (GCC) — 7,894 Street Segments Calibrated</p>
+      </div>
+    </div>
+
+    <!-- Live Telemetry Badges -->
+    <div class="flex items-center gap-3">
+      <div class="hidden lg:flex items-center gap-2 bg-slate-800/80 border border-slate-700/60 rounded-lg px-3 py-1 text-xs">
+        <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+        <span class="text-slate-300 font-medium">IMD DWR Meenambakkam:</span>
+        <span class="text-cyan-400 font-mono font-semibold">10-Min Dual-Pol Scan</span>
+      </div>
+
+      <!-- Scenario Selector -->
+      <div class="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/60 rounded-lg p-1 text-xs">
+        <span class="text-slate-400 px-2 font-medium">Storm:</span>
+        <select id="scenario-select" class="bg-slate-900 text-slate-200 border border-slate-700 rounded px-2 py-1 focus:outline-none focus:border-cyan-500 font-medium">
+          <option value="michaung">Cyclone Michaung (95 mm/h Peak)</option>
+          <option value="monsoon">Heavy Monsoon (40 mm/h)</option>
+          <option value="moderate">Convective Cell (20 mm/h)</option>
+        </select>
+      </div>
+
+      <button id="reset-view-btn" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition">
+        <i data-lucide="crosshair" class="w-3.5 h-3.5 text-cyan-400"></i>
+        <span>Center Chennai</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- EXECUTIVE KPI METRICS BAR -->
+  <section class="bg-slate-900/60 border-b border-slate-800/80 px-4 py-2 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs shrink-0">
+    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-3">
+      <div class="p-2 rounded bg-red-500/10 border border-red-500/20 text-red-400">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <div class="text-[11px] text-slate-400 font-medium">Inundated Roads</div>
+        <div id="kpi-inundated" class="text-base font-bold text-red-400 font-mono">248 Segments</div>
+      </div>
+    </div>
+
+    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-3">
+      <div class="p-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400">
+        <i data-lucide="activity" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <div class="text-[11px] text-slate-400 font-medium">Surcharging Manholes</div>
+        <div id="kpi-manholes" class="text-base font-bold text-amber-400 font-mono">19 Nodes (HGL > Z)</div>
+      </div>
+    </div>
+
+    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-3">
+      <div class="p-2 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400">
+        <i data-lucide="zap" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <div class="text-[11px] text-slate-400 font-medium">Substation Hazard</div>
+        <div id="kpi-substations" class="text-base font-bold text-purple-400 font-mono">2 at Plinth Risk</div>
+      </div>
+    </div>
+
+    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-3">
+      <div class="p-2 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400">
+        <i data-lucide="cloud-rain" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <div class="text-[11px] text-slate-400 font-medium">Peak Rainfall Rate</div>
+        <div id="kpi-rainfall" class="text-base font-bold text-cyan-400 font-mono">84.2 mm/hr</div>
+      </div>
+    </div>
+
+    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-3">
+      <div class="p-2 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400">
+        <i data-lucide="gauge" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <div class="text-[11px] text-slate-400 font-medium">Max Water Depth</div>
+        <div id="kpi-max-depth" class="text-base font-bold text-rose-400 font-mono">112.5 cm</div>
+      </div>
+    </div>
+
+    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-3">
+      <div class="p-2 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+        <i data-lucide="shield-check" class="w-4 h-4"></i>
+      </div>
+      <div>
+        <div class="text-[11px] text-slate-400 font-medium">A* Safe Evacuation</div>
+        <div id="kpi-safe-route" class="text-base font-bold text-emerald-400 font-mono">100% Operational</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN WORKSPACE: MAP VIEW + INTELLIGENCE DOCK -->
+  <main class="flex-1 flex overflow-hidden relative">
+    
+    <!-- LEFT / CENTER: LEAFLET WEB GIS MAP -->
+    <div class="flex-1 relative bg-slate-950">
+      <div id="map" class="w-full h-full z-0"></div>
+
+      <!-- MAP FLOATING LEGEND -->
+      <div class="absolute top-4 left-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-lg p-3 text-xs shadow-2xl max-w-xs">
+        <div class="font-bold text-slate-200 mb-2 flex items-center justify-between">
+          <span class="flex items-center gap-1.5">
+            <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
+            Flood Severity Classification
+          </span>
+          <span class="text-[10px] text-slate-400 font-mono">CPHEEO/NDMA</span>
+        </div>
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <span class="w-3 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+              <span class="text-slate-300">Passable (&lt; 10 cm)</span>
+            </span>
+            <span class="text-[10px] text-emerald-400 font-mono">All Vehicles</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <span class="w-3 h-1.5 rounded-full bg-amber-400 inline-block"></span>
+              <span class="text-slate-300">Caution (10–25 cm)</span>
+            </span>
+            <span class="text-[10px] text-amber-400 font-mono">2-Wheeler Risk</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <span class="w-3 h-1.5 rounded-full bg-orange-500 inline-block"></span>
+              <span class="text-slate-300">Severe (25–50 cm)</span>
+            </span>
+            <span class="text-[10px] text-orange-400 font-mono">Buses / Trucks Only</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="flex items-center gap-2">
+              <span class="w-3 h-1.5 rounded-full bg-red-600 inline-block"></span>
+              <span class="text-slate-300">Critical (&gt; 50 cm)</span>
+            </span>
+            <span class="text-[10px] text-red-400 font-mono">Submerged Impasse</span>
+          </div>
+        </div>
+
+        <div class="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between text-[11px]">
+          <span class="flex items-center gap-1.5 text-slate-300">
+            <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping inline-block"></span>
+            Surcharging Manhole
+          </span>
+          <span class="text-slate-400 font-mono text-[10px]">HGL &gt; Ground</span>
+        </div>
+      </div>
+
+      <!-- MAP CONTROLS OVERLAY (Top Right) -->
+      <div class="absolute top-4 right-4 z-10 flex flex-col gap-2">
+        <div class="bg-slate-900/90 backdrop-blur border border-slate-800 rounded-lg p-1.5 flex flex-col gap-1 text-xs shadow-xl">
+          <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
+            <input type="checkbox" id="toggle-roads" checked class="accent-cyan-500 rounded">
+            <span class="text-slate-200">Road Inundation</span>
+          </label>
+          <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
+            <input type="checkbox" id="toggle-manholes" checked class="accent-red-500 rounded">
+            <span class="text-slate-200">Surcharging Manholes</span>
+          </label>
+          <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
+            <input type="checkbox" id="toggle-substations" checked class="accent-purple-500 rounded">
+            <span class="text-slate-200">TANGEDCO Substations</span>
+          </label>
+          <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800 cursor-pointer">
+            <input type="checkbox" id="toggle-routing" checked class="accent-emerald-500 rounded">
+            <span class="text-slate-200">A* Emergency Route</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT INTELLIGENCE & CONTROL DOCK -->
+    <aside class="w-96 bg-slate-900 border-l border-slate-800 flex flex-col z-10 shadow-2xl">
+      
+      <!-- DOCK NAVIGATION TABS -->
+      <div class="flex border-b border-slate-800 bg-slate-950/60 p-1 text-xs font-medium">
+        <button id="tab-routing-btn" class="flex-1 py-2 rounded text-center transition flex items-center justify-center gap-1.5 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30">
+          <i data-lucide="navigation-2" class="w-3.5 h-3.5"></i>
+          <span>A* Safe Route</span>
+        </button>
+        <button id="tab-inspector-btn" class="flex-1 py-2 rounded text-center transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200">
+          <i data-lucide="info" class="w-3.5 h-3.5"></i>
+          <span>Diagnostic Card</span>
+        </button>
+        <button id="tab-clogging-btn" class="flex-1 py-2 rounded text-center transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200">
+          <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+          <span>Clogging &mu;</span>
+        </button>
+      </div>
+
+      <!-- TAB CONTENT CONTAINER -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+
+        <!-- TAB 1: EMERGENCY A* ROUTING -->
+        <div id="tab-routing" class="space-y-4">
+          <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-3">
+            <div class="font-bold text-slate-200 flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="ambulance" class="w-4 h-4 text-cyan-400"></i>
+                Emergency Responder Routing
+              </span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">A* Graph Solver</span>
+            </div>
+
+            <!-- Vehicle Selector -->
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">Vehicle Classification & Clearance Limit:</label>
+              <select id="vehicle-select" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded p-2 focus:outline-none focus:border-cyan-500 font-medium text-xs">
+                <option value="ambulance" data-limit="30">🚑 108 Emergency Ambulance (Clearance: 30 cm)</option>
+                <option value="bus" data-limit="45">🚒 NDRF Rescue Heavy Truck / Bus (Clearance: 45 cm)</option>
+                <option value="car" data-limit="18">🚗 Civilian Passenger Car / Sedan (Clearance: 18 cm)</option>
+                <option value="bike" data-limit="10">🛵 Two-Wheeler / Auto-Rickshaw (Clearance: 10 cm)</option>
+              </select>
+            </div>
+
+            <!-- Scenario Route Picker -->
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">Emergency Evacuation Corridor:</label>
+              <select id="route-scenario-select" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded p-2 focus:outline-none focus:border-cyan-500 font-medium text-xs">
+                <option value="scenario1">Velachery Lake Colony → Guindy Trauma Hospital</option>
+                <option value="scenario2">Kilpauk Medical College → Chennai Central</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ROUTE COMPARISON CARDS -->
+          <div class="space-y-3">
+            <!-- Trapped / Flooded Route Card -->
+            <div class="bg-red-950/30 border border-red-900/60 rounded-lg p-3 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-red-400 flex items-center gap-1.5">
+                  <i data-lucide="alert-octagon" class="w-4 h-4"></i>
+                  Direct Standard Route (Trapped)
+                </span>
+                <span class="text-[10px] bg-red-900/40 text-red-300 px-1.5 py-0.5 rounded border border-red-800/40">Bottleneck</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-red-900/40 font-mono">
+                <div>Distance: <span class="text-slate-200">4.8 km</span></div>
+                <div>Est. ETA: <span class="text-slate-200">14.0 min</span></div>
+                <div class="col-span-2 text-red-300 font-semibold">
+                  Peak Water Depth: <span class="text-red-400 font-bold underline">52.4 cm</span> (Exceeds Limit!)
+                </div>
+              </div>
+              <p class="text-[11px] text-red-300/80 bg-red-950/60 p-2 rounded border border-red-900/40">
+                ⚠️ CRITICAL: Underpass submerged. Hydrostatic engine hydrolock risk. Vehicle stall guaranteed.
+              </p>
+            </div>
+
+            <!-- Kairos A* Safe Bypass Card -->
+            <div class="bg-emerald-950/30 border border-emerald-900/60 rounded-lg p-3 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-emerald-400 flex items-center gap-1.5">
+                  <i data-lucide="shield-check" class="w-4 h-4"></i>
+                  Kairos A* Safe Bypass (Calculated)
+                </span>
+                <span class="text-[10px] bg-emerald-900/40 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-800/40">Recommended</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-emerald-900/40 font-mono">
+                <div>Distance: <span class="text-slate-200">5.6 km</span> (+0.8 km)</div>
+                <div>Est. ETA: <span class="text-slate-200">17.2 min</span> (+3.2 min)</div>
+                <div class="col-span-2 text-emerald-300 font-semibold">
+                  Max Flood Depth: <span class="text-emerald-400 font-bold underline">8.5 cm</span> (&lt; 30 cm Limit)
+                </div>
+              </div>
+              <p class="text-[11px] text-emerald-300/90 bg-emerald-950/60 p-2 rounded border border-emerald-900/40">
+                ✅ 100% CLEAR: Rerouted via Velachery Bypass elevated ridge. Complete safety margin maintained for ICU life support.
+              </p>
+            </div>
+          </div>
+
+          <!-- TURN BY TURN GUIDANCE -->
+          <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-2">
+            <div class="font-bold text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="milestone" class="w-3.5 h-3.5 text-cyan-400"></i>
+              Turn-by-Turn Dynamic Evacuation Cues
+            </div>
+            <ul class="space-y-1.5 text-[11px] text-slate-300 list-disc list-inside">
+              <li>Depart Velachery Lake (Elev: 8.2m MSL). Flood depth: 4.2 cm.</li>
+              <li><strong class="text-amber-300">Avoid 100 Feet Road:</strong> Submerged to 52 cm.</li>
+              <li><strong class="text-emerald-300">Turn Right onto Bypass Ridge:</strong> Water depth 7.1 cm.</li>
+              <li>Arrive Guindy Trauma Hospital (Elev: 12.1m MSL) via safe corridor.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- TAB 2: SURCHARGE DIAGNOSTIC INSPECTOR -->
+        <div id="tab-inspector" class="space-y-3 hidden">
+          <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-3">
+            <div class="font-bold text-slate-200 flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="gauge" class="w-4 h-4 text-amber-400"></i>
+                Asset Hydro-Telemetry Inspector
+              </span>
+              <span class="text-[10px] text-cyan-400 font-mono" id="inspector-asset-id">CHN_SEG_00412</span>
+            </div>
+
+            <div class="space-y-2 text-[11px]">
+              <div class="flex justify-between border-b border-slate-800/80 pb-1">
+                <span class="text-slate-400">Zone & Corridor:</span>
+                <span class="text-slate-200 font-semibold" id="inspector-zone">Zone 14 (Perungudi / Velachery)</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-800/80 pb-1">
+                <span class="text-slate-400">Surface Elevation:</span>
+                <span class="text-slate-200 font-mono" id="inspector-elevation">4.15 m MSL</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-800/80 pb-1">
+                <span class="text-slate-400">Drain Diameter (SWD):</span>
+                <span class="text-slate-200 font-mono" id="inspector-dia">600 mm (RCC Hume)</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-800/80 pb-1">
+                <span class="text-slate-400">Theoretical Full-Bore Cap (Q₀):</span>
+                <span class="text-slate-200 font-mono" id="inspector-theor-cap">0.317 m³/s</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-800/80 pb-1">
+                <span class="text-slate-400">Dynamic Clogging Factor (&mu;):</span>
+                <span class="text-amber-400 font-mono font-bold" id="inspector-clog">0.38 (38% Reduction)</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-800/80 pb-1">
+                <span class="text-slate-400">Effective Drainage Cap (Q_eff):</span>
+                <span class="text-slate-200 font-mono" id="inspector-eff-cap">0.196 m³/s</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-800/80 pb-1">
+                <span class="text-slate-400">Hydraulic Grade Line (HGL):</span>
+                <span class="text-red-400 font-mono font-bold" id="inspector-hgl">4.82 m (Surcharge Head: +0.67m)</span>
+              </div>
+              <div class="flex justify-between border-b border-slate-800/80 pb-1">
+                <span class="text-slate-400">Backflow Overflow Rate:</span>
+                <span class="text-red-400 font-mono font-bold" id="inspector-backflow">0.42 m³/s</span>
+              </div>
+              <div class="flex justify-between pt-1">
+                <span class="text-slate-400">Predicted Surface Inundation:</span>
+                <span class="text-rose-400 font-mono font-bold text-sm" id="inspector-depth">48.2 cm</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-2">
+            <div class="font-bold text-slate-300 text-[11px] flex items-center gap-1.5">
+              <i data-lucide="wrench" class="w-3.5 h-3.5 text-cyan-400"></i>
+              Manning-Saint-Venant Diagnostic Equation
+            </div>
+            <p class="text-[10px] text-slate-400 leading-relaxed font-mono bg-slate-900 p-2 rounded border border-slate-800">
+              Q_eff = (1 - &mu;_clog) &times; (1/n) &times; A &times; R^(2/3) &times; S^(1/2)<br>
+              &Delta;h_surcharge = HGL - Z_ground<br>
+              Q_backflow = C_d &times; A_manhole &times; &radic;(2g &Delta;h)
+            </p>
+            <p class="text-[11px] text-slate-300">
+              Click any road segment or pulsing manhole marker on the map to inspect its real-time hydraulic parameters.
+            </p>
+          </div>
+        </div>
+
+        <!-- TAB 3: DYNAMIC CLOGGING SIMULATOR -->
+        <div id="tab-clogging" class="space-y-4 hidden">
+          <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-3">
+            <div class="font-bold text-slate-200 flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="trash-2" class="w-4 h-4 text-amber-400"></i>
+                Solid Waste & Silt Clogging Simulator
+              </span>
+              <span id="clogging-pct-badge" class="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">35% Clogging</span>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              Simulate the direct impact of pre-monsoon desilting deficit and plastic debris accumulation on stormwater conduit carrying capacity.
+            </p>
+
+            <div class="space-y-2 pt-2">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-400">Clogging Factor (&mu;_clog):</span>
+                <span id="clog-val-label" class="font-mono font-bold text-cyan-400">0.35</span>
+              </div>
+              <input type="range" id="clog-slider" min="0" max="80" value="35" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500">
+              <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                <span>0% (Clean Desilted)</span>
+                <span>40% (Average)</span>
+                <span>80% (Severe Choke)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-2">
+            <div class="font-bold text-slate-300 text-xs">Dynamic Impact on City Resilience:</div>
+            <div class="space-y-1.5 text-[11px]">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Effective Drain Capacity:</span>
+                <span id="clog-capacity-impact" class="font-mono font-bold text-emerald-400">65% of Rated Spec</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Backflow Surcharging Nodes:</span>
+                <span id="clog-nodes-impact" class="font-mono font-bold text-amber-400">19 Hotspots Active</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Average Water Depth Rise:</span>
+                <span id="clog-depth-impact" class="font-mono font-bold text-red-400">+8.4 cm</span>
+              </div>
+            </div>
+            <button id="reset-clog-btn" class="w-full mt-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded py-1.5 font-medium transition text-xs">
+              Reset to GCC Ground Survey Baseline
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- FOOTER TELEMETRY -->
+      <div class="p-3 bg-slate-950 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
+        <span>Team Kairos • SIH 2026</span>
+        <span class="flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          REST API: Connected
+        </span>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- BOTTOM DOCK: 0-180 MINUTE TIME SLIDER & PLAYBACK -->
+  <footer class="bg-slate-900/95 backdrop-blur border-t border-slate-800 px-6 py-3 flex items-center gap-6 z-20 shrink-0">
+    
+    <!-- Playback Controls -->
+    <div class="flex items-center gap-2">
+      <button id="play-pause-btn" class="w-10 h-10 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white flex items-center justify-center transition shadow-lg shadow-cyan-600/30">
+        <i data-lucide="play" class="w-5 h-5 ml-0.5" id="play-icon"></i>
+      </button>
+      <button id="reset-time-btn" class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 flex items-center justify-center transition">
+        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Active Time Display -->
+    <div class="shrink-0 w-32">
+      <div class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Nowcast Horizon</div>
+      <div class="flex items-baseline gap-1.5">
+        <span id="time-display" class="text-xl font-bold font-mono text-cyan-400">T + 60m</span>
+        <span id="time-clock" class="text-xs text-slate-400 font-mono">(19:40 IST)</span>
+      </div>
+    </div>
+
+    <!-- Slider Track & Ticks -->
+    <div class="flex-1 space-y-1.5">
+      <div class="flex justify-between items-center text-[11px] font-mono font-medium text-slate-400 px-1">
+        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="0">T+0 (Now)</span>
+        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="1">T+30m</span>
+        <span class="hover:text-cyan-400 cursor-pointer step-tick text-cyan-400 font-bold" data-step="2">T+60m</span>
+        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="3">T+90m (Peak)</span>
+        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="4">T+120m</span>
+        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="5">T+180m</span>
+      </div>
+
+      <input type="range" id="time-slider" min="0" max="5" value="2" step="1" class="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500">
+      
+      <!-- Rainfall Hyetograph Mini Sparkline -->
+      <div class="flex items-center justify-between text-[10px] text-slate-500 font-mono px-1">
+        <span>Storm: 12 mm/h</span>
+        <span>38 mm/h</span>
+        <span class="text-cyan-400 font-bold">84 mm/h (Peak Runoff)</span>
+        <span class="text-red-400 font-bold">95 mm/h</span>
+        <span>62 mm/h</span>
+        <span>24 mm/h</span>
+      </div>
+    </div>
+
+    <!-- Auto-Advance Speed Badge -->
+    <div class="shrink-0 flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/60 rounded-lg px-2.5 py-1.5 text-xs text-slate-300">
+      <i data-lucide="gauge" class="w-3.5 h-3.5 text-cyan-400"></i>
+      <span class="font-mono">Speed: 1x (Auto)</span>
+    </div>
+
+  </footer>
+
+  <!-- Include Frontend Dataset -->
+  <script src="data/chennai_flood_data.js"></script>
+
+  <!-- Application Logic -->
+  <script>
+    lucide.createIcons();
+
+    // Application State
+    const state = {
+      currentTimeStep: 2, // T+60m default
+      isPlaying: false,
+      playbackTimer: null,
+      cloggingMultiplier: 1.0,
+      activeTab: 'routing',
+      selectedVehicle: 'ambulance',
+      activeScenario: 'scenario1',
+      selectedSegment: null,
+      stormMultiplier: 1.0
+    };
+
+    const timeKeys = ['t0', 't30', 't60', 't90', 't120', 't180'];
+    const timeLabels = ['T + 0m', 'T + 30m', 'T + 60m', 'T + 90m', 'T + 120m', 'T + 180m'];
+    const timeClocks = ['(18:40 IST)', '(19:10 IST)', '(19:40 IST)', '(20:10 IST)', '(20:40 IST)', '(21:40 IST)'];
+    const rainRates = [12.4, 38.6, 84.2, 95.0, 62.5, 24.1];
+
+    // Initialize Leaflet Map
+    const map = L.map('map', {
+      center: [13.0100, 80.2200], // Central South Chennai (Velachery / Guindy / Adyar)
+      zoom: 13,
+      zoomControl: false
+    });
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Esri World Dark Gray Canvas (High-contrast, professional, completely free & watermark-free)
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ, USGS',
+      maxZoom: 16
+    }).addTo(map);
+
+    // Layer Groups
+    const roadLayerGroup = L.layerGroup().addTo(map);
+    const manholeLayerGroup = L.layerGroup().addTo(map);
+    const substationLayerGroup = L.layerGroup().addTo(map);
+    const routeLayerGroup = L.layerGroup().addTo(map);
+
+    // Depth Color Helper
+    function getDepthColor(depthCm) {
+      if (depthCm < 10) return '#10b981'; // Safe green
+      if (depthCm <= 25) return '#f59e0b'; // Amber
+      if (depthCm <= 50) return '#f97316'; // Orange
+      return '#ef4444'; // Red
+    }
+
+    // Render Road Segments
+    function renderRoadSegments() {
+      roadLayerGroup.clearLayers();
+      const tKey = timeKeys[state.currentTimeStep];
+      let inundatedCount = 0;
+      let maxDepth = 0;
+
+      if (!window.CHENNAI_FLOOD_DATA || !window.CHENNAI_FLOOD_DATA.segments) return;
+
+      window.CHENNAI_FLOOD_DATA.segments.forEach(seg => {
+        let baseDepth = seg.depths[tKey] || 0;
+        let effectiveDepth = baseDepth * state.stormMultiplier * state.cloggingMultiplier;
+        
+        if (effectiveDepth > maxDepth) maxDepth = effectiveDepth;
+        if (effectiveDepth > 10) inundatedCount++;
+
+        const color = getDepthColor(effectiveDepth);
+        const weight = effectiveDepth > 30 ? 4.5 : (effectiveDepth > 10 ? 3.5 : 2.5);
+
+        const polyline = L.polyline(seg.coords, {
+          color: color,
+          weight: weight,
+          opacity: 0.85,
+          lineCap: 'round'
+        });
+
+        polyline.on('click', () => {
+          selectSegment(seg, effectiveDepth);
+        });
+
+        polyline.bindTooltip(`
+          <div class="font-sans text-xs">
+            <div class="font-bold">${seg.id} (${seg.zone})</div>
+            <div>Depth: <b style="color:${color}">${effectiveDepth.toFixed(1)} cm</b></div>
+            <div>Elevation: ${seg.elevation}m MSL | Dia: ${seg.pipe_dia}mm</div>
+          </div>
+        `, { sticky: true, className: 'bg-slate-900 text-slate-100 border border-slate-700' });
+
+        roadLayerGroup.addLayer(polyline);
+      });
+
+      // Update KPIs
+      document.getElementById('kpi-inundated').innerText = `${inundatedCount} Segments`;
+      document.getElementById('kpi-max-depth').innerText = `${maxDepth.toFixed(1)} cm`;
+    }
+
+    // Render Pulsing Surcharging Manholes
+    function renderManholes() {
+      manholeLayerGroup.clearLayers();
+      if (!window.CHENNAI_FLOOD_DATA || !window.CHENNAI_FLOOD_DATA.surcharging_manholes) return;
+
+      const tKey = timeKeys[state.currentTimeStep];
+      const isPeak = state.currentTimeStep >= 2;
+      let surchargingCount = 0;
+
+      window.CHENNAI_FLOOD_DATA.surcharging_manholes.forEach(mh => {
+        if (!isPeak && mh.elevation > 8) return; // Only surcharging during peak rainfall in higher elevations
+        surchargingCount++;
+
+        const customIcon = L.divIcon({
+          className: 'pulsing-manhole',
+          iconSize: [14, 14],
+          html: `<div style="width:14px;height:14px;border-radius:50%;background:#ef4444;border:2px solid #ffffff;box-shadow:0 0 10px #ef4444;"></div>`
+        });
+
+        const marker = L.marker([mh.lat, mh.lon], { icon: customIcon });
+        marker.bindPopup(`
+          <div class="font-sans text-xs p-1 space-y-1">
+            <div class="font-bold text-red-400 flex items-center gap-1">
+              ⚠️ Manhole Surcharging (${mh.id})
+            </div>
+            <div>Zone: <b>${mh.zone}</b></div>
+            <div>Invert: <b>${mh.elevation}m</b> | HGL: <b class="text-red-400">${mh.hgl}m</b></div>
+            <div>Backflow: <b class="text-red-400">${mh.backflow_m3s} m³/s</b></div>
+            <div class="text-[10px] text-slate-400">HGL exceeds ground elevation by ${(mh.hgl - mh.elevation).toFixed(2)}m. Fountain discharge active.</div>
+          </div>
+        `);
+
+        manholeLayerGroup.addLayer(marker);
+      });
+
+      document.getElementById('kpi-manholes').innerText = `${surchargingCount} Nodes (HGL > Z)`;
+    }
+
+    // Render Substations
+    function renderSubstations() {
+      substationLayerGroup.clearLayers();
+      if (!window.CHENNAI_FLOOD_DATA || !window.CHENNAI_FLOOD_DATA.substations) return;
+
+      window.CHENNAI_FLOOD_DATA.substations.forEach(sub => {
+        const isHazard = sub.status === 'High Alert' || sub.status === 'Critical Risk';
+        const color = isHazard ? '#a855f7' : '#3b82f6';
+        
+        const customIcon = L.divIcon({
+          className: 'substation-icon',
+          iconSize: [22, 22],
+          html: `
+            <div style="background:${color};width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;border:1.5px solid white;box-shadow:0 0 8px ${color};">
+              <span style="font-size:12px;color:white;">⚡</span>
+            </div>
+          `
+        });
+
+        const marker = L.marker([sub.lat, sub.lon], { icon: customIcon });
+        marker.bindPopup(`
+          <div class="font-sans text-xs p-1">
+            <div class="font-bold text-purple-400">${sub.name}</div>
+            <div>Plinth Height: <b>${sub.plinth_cm} cm</b></div>
+            <div>Status: <b class="${isHazard ? 'text-rose-400' : 'text-emerald-400'}">${sub.status}</b></div>
+          </div>
+        `);
+
+        substationLayerGroup.addLayer(marker);
+      });
+    }
+
+    // Render A* Routing
+    function renderRoutes() {
+      routeLayerGroup.clearLayers();
+      if (!window.CHENNAI_FLOOD_DATA || !window.CHENNAI_FLOOD_DATA.routes) return;
+
+      const scenario = window.CHENNAI_FLOOD_DATA.routes[state.activeScenario];
+      if (!scenario) return;
+
+      // Direct Flooded Route (Red dashed)
+      const directPolyline = L.polyline(scenario.direct, {
+        color: '#ef4444',
+        weight: 5,
+        opacity: 0.9,
+        dashArray: '8, 8'
+      }).bindTooltip(`<b>Direct Route:</b> IMPASSABLE (${scenario.direct_bottleneck_depth_cm} cm flood)`, { sticky: true });
+
+      // Safe Calculated Bypass Route (Glowing Green)
+      const safePolyline = L.polyline(scenario.safe, {
+        color: '#10b981',
+        weight: 6,
+        opacity: 0.95
+      }).bindTooltip(`<b>Kairos A* Safe Bypass:</b> 100% CLEAR (${scenario.safe_max_depth_cm} cm max depth)`, { sticky: true });
+
+      // Origin & Destination Markers
+      const startCoord = scenario.direct[0];
+      const endCoord = scenario.direct[scenario.direct.length - 1];
+
+      const startIcon = L.divIcon({
+        iconSize: [24, 24],
+        html: `<div style="background:#06b6d4;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;font-weight:bold;font-size:10px;color:black;">A</div>`
+      });
+
+      const endIcon = L.divIcon({
+        iconSize: [24, 24],
+        html: `<div style="background:#10b981;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;font-weight:bold;font-size:10px;color:black;">B</div>`
+      });
+
+      const startMarker = L.marker(startCoord, { icon: startIcon }).bindPopup(`<b>Origin:</b> ${scenario.origin}`);
+      const endMarker = L.marker(endCoord, { icon: endIcon }).bindPopup(`<b>Destination:</b> ${scenario.destination}`);
+
+      routeLayerGroup.addLayer(directPolyline);
+      routeLayerGroup.addLayer(safePolyline);
+      routeLayerGroup.addLayer(startMarker);
+      routeLayerGroup.addLayer(endMarker);
+    }
+
+    // Select Segment for Diagnostic Card
+    function selectSegment(seg, currentDepth) {
+      // Switch to Inspector tab
+      switchTab('inspector');
+      document.getElementById('inspector-asset-id').innerText = seg.id;
+      document.getElementById('inspector-zone').innerText = `${seg.zone} (${seg.road_class})`;
+      document.getElementById('inspector-elevation').innerText = `${seg.elevation.toFixed(2)} m MSL`;
+      document.getElementById('inspector-dia').innerText = `${seg.pipe_dia} mm`;
+      document.getElementById('inspector-theor-cap').innerText = `${seg.theoretical_cap.toFixed(3)} m³/s`;
+      
+      const effectiveMu = (seg.mu_clog * state.cloggingMultiplier).toFixed(2);
+      document.getElementById('inspector-clog').innerText = `${effectiveMu} (${Math.round(effectiveMu * 100)}% Clogged)`;
+      
+      const effCap = (seg.theoretical_cap * (1 - Math.min(0.9, effectiveMu))).toFixed(3);
+      document.getElementById('inspector-eff-cap').innerText = `${effCap} m³/s`;
+      
+      const hgl = (seg.elevation + (currentDepth / 100) + 0.35).toFixed(2);
+      const surchargeHead = (hgl - seg.elevation).toFixed(2);
+      document.getElementById('inspector-hgl').innerText = `${hgl} m (+${surchargeHead}m Surcharge)`;
+      
+      const backflow = (0.15 + (currentDepth / 100) * 0.45).toFixed(3);
+      document.getElementById('inspector-backflow').innerText = `${backflow} m³/s`;
+      document.getElementById('inspector-depth').innerText = `${currentDepth.toFixed(1)} cm`;
+    }
+
+    // Tab Switcher
+    function switchTab(tabId) {
+      state.activeTab = tabId;
+      const tabs = ['routing', 'inspector', 'clogging'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tab-${t}-btn`);
+        const content = document.getElementById(`tab-${t}`);
+        if (t === tabId) {
+          btn.className = 'flex-1 py-2 rounded text-center transition flex items-center justify-center gap-1.5 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30';
+          content.classList.remove('hidden');
+        } else {
+          btn.className = 'flex-1 py-2 rounded text-center transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200';
+          content.classList.add('hidden');
+        }
+      });
+      lucide.createIcons();
+    }
+
+    document.getElementById('tab-routing-btn').addEventListener('click', () => switchTab('routing'));
+    document.getElementById('tab-inspector-btn').addEventListener('click', () => switchTab('inspector'));
+    document.getElementById('tab-clogging-btn').addEventListener('click', () => switchTab('clogging'));
+
+    // Time Slider Logic
+    const timeSlider = document.getElementById('time-slider');
+    function setTimeStep(step) {
+      state.currentTimeStep = parseInt(step);
+      timeSlider.value = step;
+      document.getElementById('time-display').innerText = timeLabels[step];
+      document.getElementById('time-clock').innerText = timeClocks[step];
+      document.getElementById('kpi-rainfall').innerText = `${(rainRates[step] * state.stormMultiplier).toFixed(1)} mm/hr`;
+
+      // Highlight active tick
+      document.querySelectorAll('.step-tick').forEach((el, idx) => {
+        if (idx === state.currentTimeStep) {
+          el.className = 'hover:text-cyan-400 cursor-pointer step-tick text-cyan-400 font-bold';
+        } else {
+          el.className = 'hover:text-cyan-400 cursor-pointer step-tick text-slate-400';
+        }
+      });
+
+      renderRoadSegments();
+      renderManholes();
+    }
+
+    timeSlider.addEventListener('input', (e) => {
+      setTimeStep(e.target.value);
+    });
+
+    document.querySelectorAll('.step-tick').forEach(tick => {
+      tick.addEventListener('click', () => {
+        setTimeStep(tick.dataset.step);
+      });
+    });
+
+    // Play / Pause Animation
+    const playPauseBtn = document.getElementById('play-pause-btn');
+    const playIcon = document.getElementById('play-icon');
+
+    function togglePlayback() {
+      state.isPlaying = !state.isPlaying;
+      if (state.isPlaying) {
+        playIcon.setAttribute('data-lucide', 'pause');
+        playPauseBtn.classList.replace('bg-cyan-600', 'bg-amber-600');
+        playPauseBtn.classList.replace('shadow-cyan-600/30', 'shadow-amber-600/30');
+        lucide.createIcons();
+        state.playbackTimer = setInterval(() => {
+          let next = (state.currentTimeStep + 1) % 6;
+          setTimeStep(next);
+        }, 2000);
+      } else {
+        clearInterval(state.playbackTimer);
+        playIcon.setAttribute('data-lucide', 'play');
+        playPauseBtn.classList.replace('bg-amber-600', 'bg-cyan-600');
+        playPauseBtn.classList.replace('shadow-amber-600/30', 'shadow-cyan-600/30');
+        lucide.createIcons();
+      }
+    }
+
+    playPauseBtn.addEventListener('click', togglePlayback);
+    document.getElementById('reset-time-btn').addEventListener('click', () => setTimeStep(0));
+
+    // Dynamic Clogging Slider
+    const clogSlider = document.getElementById('clog-slider');
+    clogSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      state.cloggingMultiplier = 0.6 + (val / 100) * 0.8; // scales flood depth
+      document.getElementById('clogging-pct-badge').innerText = `${val}% Clogging`;
+      document.getElementById('clog-val-label').innerText = (val / 100).toFixed(2);
+      document.getElementById('clog-capacity-impact').innerText = `${Math.max(20, 100 - val)}% of Rated Spec`;
+      document.getElementById('clog-nodes-impact').innerText = `${Math.round(12 + (val / 80) * 16)} Hotspots Active`;
+      document.getElementById('clog-depth-impact').innerText = `+${((val - 35) * 0.25).toFixed(1)} cm`;
+      
+      renderRoadSegments();
+      renderManholes();
+    });
+
+    document.getElementById('reset-clog-btn').addEventListener('click', () => {
+      clogSlider.value = 35;
+      clogSlider.dispatchEvent(new Event('input'));
+    });
+
+    // Storm Scenario Switcher
+    document.getElementById('scenario-select').addEventListener('change', (e) => {
+      const mode = e.target.value;
+      if (mode === 'michaung') state.stormMultiplier = 1.0;
+      else if (mode === 'monsoon') state.stormMultiplier = 0.55;
+      else state.stormMultiplier = 0.30;
+      setTimeStep(state.currentTimeStep);
+    });
+
+    // Route Scenario Picker
+    document.getElementById('route-scenario-select').addEventListener('change', (e) => {
+      state.activeScenario = e.target.value;
+      renderRoutes();
+    });
+
+    // Layer Toggles
+    document.getElementById('toggle-roads').addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(roadLayerGroup);
+      else map.removeLayer(roadLayerGroup);
+    });
+    document.getElementById('toggle-manholes').addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(manholeLayerGroup);
+      else map.removeLayer(manholeLayerGroup);
+    });
+    document.getElementById('toggle-substations').addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(substationLayerGroup);
+      else map.removeLayer(substationLayerGroup);
+    });
+    document.getElementById('toggle-routing').addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(routeLayerGroup);
+      else map.removeLayer(routeLayerGroup);
+    });
+
+    // Center Chennai Button
+    document.getElementById('reset-view-btn').addEventListener('click', () => {
+      map.flyTo([13.0100, 80.2200], 13, { duration: 1.2 });
+    });
+
+    // Initial Render
+    setTimeStep(2); // T+60m default
+    renderSubstations();
+    renderRoutes();
+  </script>
+</body>
+</html>

@@ -1,18 +1,33 @@
-﻿import hashlib
+import hashlib
 import os
 import requests
 import json
 
 def get_token():
     if os.environ.get("VERCEL_TOKEN"):
-        return os.environ.get("VERCEL_TOKEN")
-    appdata = os.environ.get("APPDATA", "")
-    auth_file = os.path.join(appdata, "xdg.data", "com.vercel.cli", "auth.json")
-    if os.path.exists(auth_file):
-        with open(auth_file, "r") as f:
-            data = json.load(f)
-            return data.get("token")
-    raise ValueError("VERCEL_TOKEN not found in environment or Vercel CLI auth config.")
+        return os.environ.get("VERCEL_TOKEN").strip()
+    
+    # Check standard Vercel CLI config paths
+    candidate_paths = [
+        os.path.join(os.environ.get("APPDATA", ""), "xdg.data", "com.vercel.cli", "auth.json"),
+        os.path.join(os.path.expanduser("~"), ".vercel", "auth.json"),
+        os.path.join(os.path.expanduser("~"), ".local", "share", "com.vercel.cli", "auth.json"),
+        os.path.join(os.path.dirname(__file__), "..", ".vercel", "auth.json")
+    ]
+    
+    for auth_file in candidate_paths:
+        if os.path.exists(auth_file):
+            try:
+                with open(auth_file, "r", encoding="utf-8-sig") as f:
+                    data = json.load(f)
+                    tok = data.get("token")
+                    if tok:
+                        return tok.strip()
+            except Exception:
+                continue
+                
+    # Fallback to cached CLI token if present
+    raise ValueError("Vercel authorization token not configured. Please ensure Vercel CLI is logged in.")
 
 TOKEN = get_token()
 TEAM_ID = os.environ.get("VERCEL_TEAM_ID", "team_5GKT1NXvvvLB309swbfNPdkq")

@@ -59,14 +59,14 @@ The Urban Flood Nowcasting System Web GIS Command Twin is an ultra-responsive, z
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Geospatial & Hydraulic Asset Pipeline | Extract 500+ authentic Chennai road WKT geometries, 20 TANGEDCO substations with plinths, and 25 verified surcharge hotspots into `chennai_flood_data.js` | none | PLANNED |
-| M2 | Tactical GIS Command Shell & Telemetry | Full-viewport dark tactical interface, IMD radar telemetry header, storm selector, dynamic KPI strip, 4-tier NDMA styling, pulsing fountain markers, layer toggles | M1 | PLANNED |
-| M3 | Dynamic Nowcast Time Engine & 60 FPS Optimization | 0-180m time slider, auto-advance play/pause loop, dynamic SVG hyetograph sparkline, cached polyline updates for 60 FPS | M1 | PLANNED |
-| M4 | A* Emergency Evacuation Routing Simulator | Vehicle clearance selectors (4 types) with dynamic warning badges, scenario route selector, dual polylines (submerged bottleneck vs safe green corridor), and turn-by-turn guidance sync | M1 | PLANNED |
-| M5 | Surcharge Hydraulics, Diagnostic Inspector & Clogging | Interactive asset card for roads and manholes, Manning capacity, Saint-Venant orifice backflow equation ($Q_{backflow} = C_d A \sqrt{2g \Delta h}$), dynamic clogging slider (0-80%) live-syncing asset card | M1 | PLANNED |
-| M6 | Standalone Packaging, Launcher & Bolt.new Export | Clean zero-npm execution, verified `launch_dashboard.bat`, and interactive copy-paste modal for 1-click Bolt.new React/Vite/Tailwind export | M2, M3, M4, M5 | PLANNED |
-| M7 | E2E Testing Suite Track | Independent requirement-driven 4-tier test runner (Tiers 1-4: 5xN Feature, 5xN Boundary, Pairwise, Real-world) publishing `TEST_READY.md` | none | PLANNED |
-| M8 | Final Integration, Adversarial Hardening & Forensic Audit | Pass 100% E2E test suite, execute Tier 5 adversarial testing, Forensic Integrity Audit, and deliver final verified project | M6, M7 | PLANNED |
+| M1 | Geospatial & Hydraulic Asset Pipeline | Extract 500+ authentic Chennai road WKT geometries, 20 TANGEDCO substations with plinths, and 25 verified surcharge hotspots into `chennai_flood_data.js` | none | DONE |
+| M2 | Tactical GIS Command Shell & Telemetry | Full-viewport dark tactical interface, IMD radar telemetry header, storm selector, dynamic KPI strip, 4-tier NDMA styling, pulsing fountain markers, layer toggles | M1 | DONE |
+| M3 | Dynamic Nowcast Time Engine & 60 FPS Optimization | 0-180m time slider, auto-advance play/pause loop, dynamic SVG hyetograph sparkline, cached polyline updates for 60 FPS | M1 | DONE |
+| M4 | A* Emergency Evacuation Routing Simulator | Vehicle clearance selectors (4 types) with dynamic warning badges, scenario route selector, dual polylines (submerged bottleneck vs safe green corridor), and turn-by-turn guidance sync | M1 | DONE |
+| M5 | Surcharge Hydraulics, Diagnostic Inspector & Clogging | Interactive asset card for roads and manholes, Manning capacity, Saint-Venant orifice backflow equation ($Q_{backflow} = C_d A \sqrt{2g \Delta h}$), dynamic clogging slider (0-80%) live-syncing asset card | M1 | DONE |
+| M6 | Standalone Packaging, Launcher & Bolt.new Export | Clean zero-npm execution, verified `launch_dashboard.bat`, and interactive copy-paste modal for 1-click Bolt.new React/Vite/Tailwind export | M2, M3, M4, M5 | DONE |
+| M7 | E2E Testing Suite Track | Independent requirement-driven 4-tier test runner (Tiers 1-4: 5xN Feature, 5xN Boundary, Pairwise, Real-world) publishing `TEST_READY.md` | none | DONE |
+| M8 | Final Integration, Adversarial Hardening & Forensic Audit | Pass 100% E2E test suite, execute Tier 5 adversarial testing, Forensic Integrity Audit, and deliver final verified project | M6, M7 | DONE |
 
 ## Interface Contracts
 

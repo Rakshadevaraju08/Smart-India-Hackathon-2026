@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kairos Command Twin - Urban Flood Nowcasting System (SIH 2026 PS 26085)</title>
+  <title>KAIROS | Urban Flood Nowcasting System & Drainage Hydraulic Twin - MoES & GCC Pilot</title>
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -16,7 +16,11 @@
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
-    /* Multi-stage fountain backflow ripple animations */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    /* Hydraulic Fountain Animation */
     @keyframes fountain-wave-1 {
       0% { transform: scale(0.3); opacity: 0.95; }
       100% { transform: scale(2.2); opacity: 0; }
@@ -30,8 +34,8 @@
       100% { transform: scale(4.2); opacity: 0; }
     }
     @keyframes fountain-geyser {
-      0%, 100% { transform: scale(0.9); box-shadow: 0 0 8px #ef4444, 0 0 16px #f87171; }
-      50% { transform: scale(1.25); box-shadow: 0 0 18px #ff0000, 0 0 30px #ef4444; }
+      0%, 100% { transform: scale(0.9); box-shadow: 0 0 6px #dc2626; }
+      50% { transform: scale(1.2); box-shadow: 0 0 14px #dc2626; }
     }
 
     .fountain-manhole {
@@ -44,8 +48,8 @@
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
       border-radius: 50%;
-      border: 1.5px solid rgba(239, 68, 68, 0.9);
-      background: rgba(239, 68, 68, 0.25);
+      border: 1.5px solid rgba(220, 38, 38, 0.9);
+      background: rgba(220, 38, 38, 0.2);
       pointer-events: none;
     }
     .fountain-manhole .wave-1 { animation: fountain-wave-1 1.8s cubic-bezier(0.1, 0.7, 0.3, 1) infinite; }
@@ -55,160 +59,240 @@
       position: absolute;
       top: 2px; left: 2px; width: 14px; height: 14px;
       border-radius: 50%;
-      background: #ef4444;
+      background: #dc2626;
       border: 2px solid #ffffff;
       animation: fountain-geyser 1.2s ease-in-out infinite;
       z-index: 2;
     }
 
-    /* Substation pulse for critical plinth risk */
+    /* Substation Hazard Pulse */
     @keyframes plinth-hazard-pulse {
-      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 6px #ef4444); }
-      50% { transform: scale(1.15); filter: drop-shadow(0 0 14px #ff0000); }
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px #dc2626); }
+      50% { transform: scale(1.15); filter: drop-shadow(0 0 10px #b91c1c); }
     }
     .substation-critical {
       animation: plinth-hazard-pulse 1.4s infinite ease-in-out;
     }
 
-    /* Custom dark scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: #475569; }
-    
-    .leaflet-container {
-      background-color: #0b0f19 !important;
-    }
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
     /* Custom Leaflet Tooltip */
     .leaflet-tooltip-custom {
-      background: rgba(15, 23, 42, 0.95) !important;
-      color: #f1f5f9 !important;
-      border: 1px solid #334155 !important;
-      border-radius: 6px !important;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7) !important;
+      background: #ffffff !important;
+      color: #0f172a !important;
+      border: 1px solid #cbd5e1 !important;
+      border-radius: 4px !important;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
       padding: 6px 10px !important;
+      font-size: 11px !important;
+      font-weight: 500 !important;
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden select-none">
+<body class="bg-slate-100 text-slate-800 font-sans h-screen flex flex-col overflow-hidden select-none">
 
-  <!-- TOP APP BAR -->
-  <header class="bg-slate-900/90 backdrop-blur border-b border-slate-800 px-3 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between z-20 shrink-0 gap-2">
-    <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-      <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-tr from-cyan-600 via-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-        <i data-lucide="waves" class="w-4 h-4 sm:w-5 sm:h-5 text-white"></i>
+  <!-- 1. OFFICIAL GIGW TOP STRIP -->
+  <div class="bg-[#0B1E36] text-slate-200 border-b border-[#1E3A5F] px-3 sm:px-6 py-1 flex items-center justify-between text-[11px] shrink-0 z-30">
+    <div class="flex items-center gap-2 sm:gap-4">
+      <div class="flex items-center gap-1.5 font-medium">
+        <span class="inline-block w-3.5 h-2.5 bg-gradient-to-b from-[#FF9933] via-white to-[#138808] border border-slate-500/40 rounded-[1px]"></span>
+        <span>भारत सरकार</span>
+        <span class="text-slate-400">|</span>
+        <span class="hidden xs:inline">Government of India</span>
       </div>
+      <div class="hidden md:flex items-center gap-1.5 text-slate-300">
+        <span>•</span>
+        <span>पृथ्वी विज्ञान मंत्रालय</span>
+        <span class="text-slate-400">|</span>
+        <span>Ministry of Earth Sciences (MoES)</span>
+      </div>
+    </div>
+    
+    <!-- Accessibility & Helplines -->
+    <div class="flex items-center gap-3 sm:gap-5 text-[10px] sm:text-[11px]">
+      <div class="hidden lg:flex items-center gap-2 text-slate-300">
+        <span class="text-emerald-400 font-semibold">GCC Control Room:</span>
+        <span class="font-mono text-white bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">1913</span>
+        <span class="text-slate-500">|</span>
+        <span class="text-emerald-400 font-semibold">State EOC:</span>
+        <span class="font-mono text-white bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">1070</span>
+      </div>
+      <div class="flex items-center gap-1 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
+        <button id="font-decrease" class="hover:text-white px-1 font-mono font-bold" title="Decrease font size">A-</button>
+        <button id="font-reset" class="hover:text-white px-1 font-mono font-bold" title="Reset font size">A</button>
+        <button id="font-increase" class="hover:text-white px-1 font-mono font-bold" title="Increase font size">A+</button>
+      </div>
+      <div class="hidden sm:block text-slate-300 font-medium">
+        <span class="text-amber-400">English</span> / <span>தமிழ்</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. INDIAN NATIONAL TRICOLOR RIBBON -->
+  <div class="h-1 w-full flex shrink-0 z-30">
+    <div class="w-1/3 bg-[#FF9933]"></div>
+    <div class="w-1/3 bg-white"></div>
+    <div class="w-1/3 bg-[#138808]"></div>
+  </div>
+
+  <!-- 3. MAIN GOVERNMENT PORTAL HEADER -->
+  <header class="bg-[#0A2540] text-white border-b border-slate-700 px-3 sm:px-6 py-2.5 flex items-center justify-between z-20 shrink-0 gap-3 shadow-md">
+    <div class="flex items-center gap-3 shrink-0">
+      <!-- National Emblem & Ministry Crest -->
+      <div class="w-10 h-10 sm:w-11 sm:h-11 rounded bg-white p-1 flex items-center justify-center shadow-inner border border-slate-300 shrink-0">
+        <svg viewBox="0 0 100 100" class="w-full h-full text-[#0B1E36]">
+          <circle cx="50" cy="50" r="46" fill="none" stroke="#0A2540" stroke-width="4"/>
+          <circle cx="50" cy="50" r="38" fill="#F8FAFC" stroke="#FF9933" stroke-width="1.5"/>
+          <circle cx="50" cy="50" r="8" fill="#0A2540"/>
+          <g stroke="#0A2540" stroke-width="1.2">
+            <line x1="50" y1="50" x2="50" y2="12" />
+            <line x1="50" y1="50" x2="50" y2="88" />
+            <line x1="50" y1="50" x2="12" y2="50" />
+            <line x1="50" y1="50" x2="88" y2="50" />
+            <line x1="50" y1="50" x2="23" y2="23" />
+            <line x1="50" y1="50" x2="77" y2="77" />
+            <line x1="50" y1="50" x2="23" y2="77" />
+            <line x1="50" y1="50" x2="77" y2="23" />
+            <line x1="50" y1="50" x2="36" y2="15" />
+            <line x1="50" y1="50" x2="64" y2="85" />
+            <line x1="50" y1="50" x2="64" y2="15" />
+            <line x1="50" y1="50" x2="36" y2="85" />
+          </g>
+        </svg>
+      </div>
+
       <div>
-        <div class="flex items-center gap-1.5 sm:gap-2">
-          <h1 class="font-bold text-sm sm:text-base tracking-wide text-white flex items-center gap-1.5 sm:gap-2">
-            KAIROS <span class="hidden xs:inline">COMMAND TWIN</span>
-            <span class="text-[9px] sm:text-[10px] uppercase font-bold tracking-widest px-1.5 sm:px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">MoES Pilot</span>
+        <div class="flex items-center gap-2 flex-wrap">
+          <h1 class="font-bold text-sm sm:text-lg tracking-wide text-white flex items-center gap-2">
+            KAIROS : URBAN FLOOD NOWCASTING SYSTEM
+            <span class="text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-400/40">NCMRWF • GCC PILOT</span>
           </h1>
-          <span class="text-xs text-slate-400 hidden lg:inline">| Urban Flood Nowcasting System (SIH 2026 #26085)</span>
         </div>
-        <p class="text-[11px] text-slate-400 hidden md:block">Greater Chennai Corporation (GCC) — 7,894 Street Segments Calibrated</p>
+        <p class="text-[11px] text-slate-300 leading-tight hidden xs:block">
+          Coupled Hydrodynamic Simulation &amp; Real-Time Street Level Nowcasting | Smart India Hackathon 2026 (PS #26085)
+        </p>
+        <p class="text-[10px] text-slate-400 font-mono hidden sm:block">
+          Greater Chennai Corporation (GCC) CMA Core: 7,894 Calibrated Drainage Reaches &bull; CPHEEO / NDMA Compliant
+        </p>
       </div>
     </div>
 
-    <!-- Live Telemetry Badges & Controls -->
-    <div class="flex items-center gap-1.5 sm:gap-2.5">
-      <div class="hidden xl:flex items-center gap-2 bg-slate-800/80 border border-slate-700/60 rounded-lg px-3 py-1 text-xs">
-        <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
-        <span class="text-slate-300 font-medium">IMD DWR Meenambakkam:</span>
-        <span class="text-cyan-400 font-mono font-semibold">10-Min Dual-Pol Scan</span>
+    <!-- Right Actions & Controls -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <!-- IMD Telemetry Badge -->
+      <div class="hidden xl:flex items-center gap-2 bg-[#0F3254] border border-blue-400/30 rounded px-2.5 py-1 text-xs text-slate-200 shadow-sm">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-[11px] font-medium">IMD Radar Meenambakkam:</span>
+        <span class="text-amber-300 font-mono font-bold text-[11px]">Active (10-Min Dual-Pol)</span>
       </div>
 
       <!-- Storm Scenario Selector -->
-      <div class="flex items-center gap-1 bg-slate-800/80 border border-slate-700/60 rounded-lg p-0.5 sm:p-1 text-xs">
-        <span class="text-slate-400 px-1 sm:px-2 font-medium text-[11px] hidden sm:inline">Storm:</span>
-        <select id="scenario-select" class="bg-slate-900 text-slate-200 border border-slate-700 rounded px-1.5 sm:px-2 py-1 focus:outline-none focus:border-cyan-500 font-medium text-[11px] sm:text-xs max-w-[110px] sm:max-w-none truncate">
-          <option value="michaung">Michaung (95 mm/h)</option>
-          <option value="monsoon">Monsoon (40 mm/h)</option>
-          <option value="moderate">Convective (20 mm/h)</option>
+      <div class="flex items-center gap-1 bg-[#0F3254] border border-slate-600 rounded p-1 text-xs">
+        <label for="scenario-select" class="text-slate-300 px-1 text-[11px] font-semibold hidden md:inline">Event:</label>
+        <select id="scenario-select" class="bg-[#0B1E36] text-white border border-slate-600 rounded px-2 py-1 text-xs font-medium focus:outline-none focus:border-amber-400 max-w-[130px] sm:max-w-none">
+          <option value="michaung">Cyclone Michaung (95 mm/h Peak)</option>
+          <option value="monsoon">Heavy Monsoon (40 mm/h Continuous)</option>
+          <option value="moderate">Convective Cell (20 mm/h Local)</option>
         </select>
       </div>
 
       <!-- Center View Reset -->
-      <button id="reset-view-btn" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 px-2 sm:px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1 sm:gap-1.5 transition" title="Center on Chennai Metropolitan Core">
-        <i data-lucide="crosshair" class="w-3.5 h-3.5 text-cyan-400"></i>
-        <span class="hidden sm:inline">Center</span>
+      <button id="reset-view-btn" class="bg-[#0F3254] hover:bg-[#16436E] border border-slate-600 text-white px-2.5 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 transition" title="Center on Chennai Metropolitan Core">
+        <i data-lucide="crosshair" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span class="hidden sm:inline">Re-Center</span>
       </button>
 
-      <!-- Bolt.new Cloud Export Modal Trigger -->
-      <button id="export-bolt-btn" class="hidden md:flex bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs items-center gap-1.5 shadow-lg shadow-amber-500/20 transition">
-        <i data-lucide="zap" class="w-3.5 h-3.5 fill-current"></i>
-        <span>Bolt.new</span>
+      <!-- Official SITREP Report Export Trigger -->
+      <button id="export-bolt-btn" class="bg-[#1E3A8A] hover:bg-[#1D4ED8] border border-blue-400/50 text-white font-semibold px-3 py-1.5 rounded text-xs flex items-center gap-1.5 shadow transition">
+        <i data-lucide="file-text" class="w-3.5 h-3.5 text-amber-300"></i>
+        <span class="hidden xs:inline">Official SITREP</span>
+        <span class="xs:hidden">SITREP</span>
       </button>
 
-      <!-- Mobile Dock Toggle Button -->
-      <button id="mobile-dock-toggle-btn" class="lg:hidden bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1.5 shadow-md shadow-cyan-500/25 active:scale-95 transition" title="Open Controls & Diagnostic Panel">
+      <!-- Mobile Intelligence Drawer Toggle Button -->
+      <button id="mobile-dock-toggle-btn" class="lg:hidden bg-amber-600 hover:bg-amber-500 text-white font-bold px-2.5 py-1.5 rounded text-xs flex items-center gap-1.5 shadow transition">
         <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
-        <span>Panel</span>
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Command</span>
       </button>
     </div>
   </header>
 
-  <!-- EXECUTIVE KPI METRICS BAR -->
-  <section class="bg-slate-900/60 border-b border-slate-800/80 px-2 sm:px-4 py-1.5 sm:py-2 flex lg:grid lg:grid-cols-6 gap-2 sm:gap-3 text-xs shrink-0 overflow-x-auto no-scrollbar scroll-smooth">
-    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[175px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
-      <div class="p-1.5 sm:p-2 rounded bg-red-500/10 border border-red-500/20 text-red-400 shrink-0">
-        <i data-lucide="alert-triangle" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+  <!-- 4. OFFICIAL EXECUTIVE KPI TELEMETRY BAR (Government Clean Format) -->
+  <section class="bg-white border-b border-slate-300 px-3 sm:px-6 py-2 flex lg:grid lg:grid-cols-6 gap-2 sm:gap-3 text-xs shrink-0 overflow-x-auto no-scrollbar shadow-xs">
+    
+    <!-- KPI 1 -->
+    <div class="bg-slate-50 border border-slate-200 rounded p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[170px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
+      <div class="p-2 rounded bg-red-100 text-red-700 border border-red-200 shrink-0">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
       </div>
       <div>
-        <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Inundated Roads</div>
-        <div id="kpi-inundated" class="text-sm sm:text-base font-bold text-red-400 font-mono">-- Segments</div>
+        <div class="text-[10px] text-slate-500 uppercase font-semibold">Inundated Reaches</div>
+        <div id="kpi-inundated" class="text-sm sm:text-base font-bold text-red-700 font-mono">-- Segments</div>
+        <div class="text-[9px] text-slate-400">Depth &gt; 10 cm (NDMA)</div>
       </div>
     </div>
 
-    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[175px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
-      <div class="p-1.5 sm:p-2 rounded bg-amber-500/10 border border-amber-500/20 text-amber-400 shrink-0">
-        <i data-lucide="activity" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+    <!-- KPI 2 -->
+    <div class="bg-slate-50 border border-slate-200 rounded p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[170px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
+      <div class="p-2 rounded bg-amber-100 text-amber-700 border border-amber-200 shrink-0">
+        <i data-lucide="activity" class="w-4 h-4"></i>
       </div>
       <div>
-        <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Surcharging Manholes</div>
-        <div id="kpi-manholes" class="text-sm sm:text-base font-bold text-amber-400 font-mono">-- Nodes</div>
+        <div class="text-[10px] text-slate-500 uppercase font-semibold">Surcharge Manholes</div>
+        <div id="kpi-manholes" class="text-sm sm:text-base font-bold text-amber-700 font-mono">-- Nodes</div>
+        <div class="text-[9px] text-slate-400">HGL &gt; Ground Level</div>
       </div>
     </div>
 
-    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[175px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
-      <div class="p-1.5 sm:p-2 rounded bg-purple-500/10 border border-purple-500/20 text-purple-400 shrink-0">
-        <i data-lucide="zap" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+    <!-- KPI 3 -->
+    <div class="bg-slate-50 border border-slate-200 rounded p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[170px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
+      <div class="p-2 rounded bg-purple-100 text-purple-700 border border-purple-200 shrink-0">
+        <i data-lucide="zap" class="w-4 h-4"></i>
       </div>
       <div>
-        <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Substation Hazard</div>
-        <div id="kpi-substations" class="text-sm sm:text-base font-bold text-purple-400 font-mono">-- Plinth Risk</div>
+        <div class="text-[10px] text-slate-500 uppercase font-semibold">TANGEDCO Grid Risk</div>
+        <div id="kpi-substations" class="text-sm sm:text-base font-bold text-purple-800 font-mono">-- Substations</div>
+        <div class="text-[9px] text-slate-400">Plinth Clearance Breach</div>
       </div>
     </div>
 
-    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[175px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
-      <div class="p-1.5 sm:p-2 rounded bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 shrink-0">
-        <i data-lucide="cloud-rain" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+    <!-- KPI 4 -->
+    <div class="bg-slate-50 border border-slate-200 rounded p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[170px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
+      <div class="p-2 rounded bg-blue-100 text-blue-700 border border-blue-200 shrink-0">
+        <i data-lucide="cloud-rain" class="w-4 h-4"></i>
       </div>
       <div>
-        <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Peak Rainfall Rate</div>
-        <div id="kpi-rainfall" class="text-sm sm:text-base font-bold text-cyan-400 font-mono">-- mm/hr</div>
+        <div class="text-[10px] text-slate-500 uppercase font-semibold">IMD Peak Intensity</div>
+        <div id="kpi-rainfall" class="text-sm sm:text-base font-bold text-blue-800 font-mono">-- mm/hr</div>
+        <div class="text-[9px] text-slate-400">Dual-Pol Radar</div>
       </div>
     </div>
 
-    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[175px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
-      <div class="p-1.5 sm:p-2 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 shrink-0">
-        <i data-lucide="gauge" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+    <!-- KPI 5 -->
+    <div class="bg-slate-50 border border-slate-200 rounded p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[170px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
+      <div class="p-2 rounded bg-rose-100 text-rose-700 border border-rose-200 shrink-0">
+        <i data-lucide="gauge" class="w-4 h-4"></i>
       </div>
       <div>
-        <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">Max Water Depth</div>
-        <div id="kpi-max-depth" class="text-sm sm:text-base font-bold text-rose-400 font-mono">-- cm</div>
+        <div class="text-[10px] text-slate-500 uppercase font-semibold">Max Ponding Depth</div>
+        <div id="kpi-max-depth" class="text-sm sm:text-base font-bold text-rose-800 font-mono">-- cm</div>
+        <div class="text-[9px] text-slate-400">CMA Lowland Depressions</div>
       </div>
     </div>
 
-    <div class="bg-slate-900/80 border border-slate-800 rounded-lg p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[175px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
-      <div class="p-1.5 sm:p-2 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 shrink-0">
-        <i data-lucide="shield-check" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+    <!-- KPI 6 -->
+    <div class="bg-slate-50 border border-slate-200 rounded p-2 flex items-center gap-2.5 min-w-[155px] sm:min-w-[170px] lg:min-w-0 flex-1 shrink-0 lg:shrink">
+      <div class="p-2 rounded bg-emerald-100 text-emerald-700 border border-emerald-200 shrink-0">
+        <i data-lucide="shield-check" class="w-4 h-4"></i>
       </div>
       <div>
-        <div class="text-[10px] sm:text-[11px] text-slate-400 font-medium">A* Safe Evacuation</div>
-        <div id="kpi-safe-route" class="text-sm sm:text-base font-bold text-emerald-400 font-mono">100% Operational</div>
+        <div class="text-[10px] text-slate-500 uppercase font-semibold">108 Evacuation Route</div>
+        <div id="kpi-safe-route" class="text-sm sm:text-base font-bold text-emerald-700 font-mono">Operational</div>
+        <div class="text-[9px] text-slate-400">A* Resilient Corridor</div>
       </div>
     </div>
   </section>
@@ -217,19 +301,19 @@
   <main class="flex-1 flex overflow-hidden relative">
     
     <!-- LEFT / CENTER: LEAFLET WEB GIS MAP -->
-    <div class="flex-1 relative bg-slate-950">
+    <div class="flex-1 relative bg-slate-100">
       <div id="map" class="w-full h-full z-0"></div>
 
-      <!-- MAP FLOATING LEGEND -->
-      <div id="map-legend" class="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 bg-slate-900/90 backdrop-blur border border-slate-800 rounded-lg p-2.5 sm:p-3 text-xs shadow-2xl max-w-[210px] sm:max-w-xs transition-all">
-        <div class="font-bold text-slate-200 flex items-center justify-between">
+      <!-- MAP FLOATING LEGEND (Government GIGW Standard) -->
+      <div id="map-legend" class="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 bg-white/95 backdrop-blur border border-slate-300 rounded shadow-md p-2.5 sm:p-3 text-xs text-slate-800 max-w-[210px] sm:max-w-xs transition-all">
+        <div class="font-bold text-slate-900 flex items-center justify-between border-b border-slate-200 pb-1.5">
           <span class="flex items-center gap-1.5 text-[11px] sm:text-xs">
-            <i data-lucide="layers" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400"></i>
-            Flood Severity
+            <i data-lucide="layers" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#0A2540]"></i>
+            Flood Inundation Scale
           </span>
           <div class="flex items-center gap-1.5">
-            <span class="text-[9px] sm:text-[10px] text-slate-400 font-mono hidden xs:inline">NDMA</span>
-            <button id="legend-toggle-btn" class="sm:hidden text-slate-400 hover:text-white p-0.5 rounded" title="Toggle Legend Details">
+            <span class="text-[9px] sm:text-[10px] text-slate-500 font-semibold bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">NDMA / CPHEEO</span>
+            <button id="legend-toggle-btn" class="sm:hidden text-slate-500 hover:text-slate-900 p-0.5 rounded" title="Toggle Legend Details">
               <i data-lucide="chevron-down" id="legend-chevron" class="w-3.5 h-3.5"></i>
             </button>
           </div>
@@ -238,131 +322,132 @@
         <div id="legend-body" class="hidden sm:block space-y-1.5 mt-2">
           <div class="flex items-center justify-between">
             <span class="flex items-center gap-2">
-              <span class="w-2.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
-              <span class="text-slate-300">&lt; 10 cm</span>
+              <span class="w-3 h-2 rounded-sm bg-[#15803D] inline-block border border-black/10"></span>
+              <span class="text-slate-700 font-medium">&lt; 10 cm</span>
             </span>
-            <span class="text-[10px] text-emerald-400 font-mono">Passable</span>
+            <span class="text-[10px] text-[#15803D] font-bold font-mono">Normal (Passable)</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="flex items-center gap-2">
-              <span class="w-2.5 h-1.5 rounded-full bg-amber-400 inline-block"></span>
-              <span class="text-slate-300">10–25 cm</span>
+              <span class="w-3 h-2 rounded-sm bg-[#D97706] inline-block border border-black/10"></span>
+              <span class="text-slate-700 font-medium">10–25 cm</span>
             </span>
-            <span class="text-[10px] text-amber-400 font-mono">Caution</span>
+            <span class="text-[10px] text-[#D97706] font-bold font-mono">Moderate Caution</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="flex items-center gap-2">
-              <span class="w-2.5 h-1.5 rounded-full bg-orange-500 inline-block"></span>
-              <span class="text-slate-300">25–50 cm</span>
+              <span class="w-3 h-2 rounded-sm bg-[#EA580C] inline-block border border-black/10"></span>
+              <span class="text-slate-700 font-medium">25–50 cm</span>
             </span>
-            <span class="text-[10px] text-orange-400 font-mono">Severe</span>
+            <span class="text-[10px] text-[#EA580C] font-bold font-mono">Severe Inundation</span>
           </div>
           <div class="flex items-center justify-between">
             <span class="flex items-center gap-2">
-              <span class="w-2.5 h-1.5 rounded-full bg-red-600 inline-block"></span>
-              <span class="text-slate-300">&gt; 50 cm</span>
+              <span class="w-3 h-2 rounded-sm bg-[#DC2626] inline-block border border-black/10"></span>
+              <span class="text-slate-700 font-medium">&gt; 50 cm</span>
             </span>
-            <span class="text-[10px] text-red-400 font-mono">Critical</span>
+            <span class="text-[10px] text-[#DC2626] font-bold font-mono">Critical (Submerged)</span>
           </div>
 
-          <div class="mt-2.5 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] sm:text-[11px]">
-            <span class="flex items-center gap-1 text-slate-300">
-              <span class="w-2 h-2 rounded-full bg-red-500 animate-ping inline-block"></span>
+          <div class="mt-2 pt-2 border-t border-slate-200 flex items-center justify-between text-[10px] sm:text-[11px]">
+            <span class="flex items-center gap-1.5 text-slate-700 font-medium">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-600 inline-block"></span>
               Surcharge Node
             </span>
-            <span class="text-slate-400 font-mono text-[9px]">Fountain</span>
+            <span class="text-slate-500 font-mono text-[9px]">HGL &gt; Ground Level</span>
           </div>
         </div>
       </div>
 
-      <!-- MAP CONTROLS OVERLAY (Top Right) -->
+      <!-- MAP CONTROLS OVERLAY (Top Right - Official White Card) -->
       <div class="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 flex flex-col gap-2">
-        <div class="bg-slate-900/90 backdrop-blur border border-slate-800 rounded-lg p-1 sm:p-1.5 flex flex-col gap-0.5 sm:gap-1 text-[10px] sm:text-xs shadow-xl">
-          <label class="flex items-center gap-1.5 sm:gap-2 px-1.5 py-1 rounded hover:bg-slate-800 cursor-pointer">
-            <input type="checkbox" id="toggle-roads" checked class="accent-cyan-500 rounded scale-90 sm:scale-100">
-            <span class="text-slate-200">Road Inundation</span>
+        <div class="bg-white/95 backdrop-blur border border-slate-300 rounded shadow-md p-1.5 sm:p-2 flex flex-col gap-1 text-[10px] sm:text-xs text-slate-700">
+          <div class="text-[9px] font-bold uppercase tracking-wider text-slate-500 px-1 border-b border-slate-200 pb-0.5">Map Layers</div>
+          <label class="flex items-center gap-1.5 sm:gap-2 px-1 py-0.5 rounded hover:bg-slate-100 cursor-pointer">
+            <input type="checkbox" id="toggle-roads" checked class="accent-[#0A2540] rounded scale-90 sm:scale-100">
+            <span class="font-medium text-slate-800">Drainage Reaches (521)</span>
           </label>
-          <label class="flex items-center gap-1.5 sm:gap-2 px-1.5 py-1 rounded hover:bg-slate-800 cursor-pointer">
-            <input type="checkbox" id="toggle-manholes" checked class="accent-red-500 rounded scale-90 sm:scale-100">
-            <span class="text-slate-200">Manholes (25)</span>
+          <label class="flex items-center gap-1.5 sm:gap-2 px-1 py-0.5 rounded hover:bg-slate-100 cursor-pointer">
+            <input type="checkbox" id="toggle-manholes" checked class="accent-red-600 rounded scale-90 sm:scale-100">
+            <span class="font-medium text-slate-800">Surcharge Nodes (25)</span>
           </label>
-          <label class="flex items-center gap-1.5 sm:gap-2 px-1.5 py-1 rounded hover:bg-slate-800 cursor-pointer">
-            <input type="checkbox" id="toggle-substations" checked class="accent-purple-500 rounded scale-90 sm:scale-100">
-            <span class="text-slate-200">Substations (20)</span>
+          <label class="flex items-center gap-1.5 sm:gap-2 px-1 py-0.5 rounded hover:bg-slate-100 cursor-pointer">
+            <input type="checkbox" id="toggle-substations" checked class="accent-purple-700 rounded scale-90 sm:scale-100">
+            <span class="font-medium text-slate-800">TANGEDCO Grids (20)</span>
           </label>
-          <label class="flex items-center gap-1.5 sm:gap-2 px-1.5 py-1 rounded hover:bg-slate-800 cursor-pointer">
-            <input type="checkbox" id="toggle-routing" checked class="accent-emerald-500 rounded scale-90 sm:scale-100">
-            <span class="text-slate-200">A* Evacuation</span>
+          <label class="flex items-center gap-1.5 sm:gap-2 px-1 py-0.5 rounded hover:bg-slate-100 cursor-pointer">
+            <input type="checkbox" id="toggle-routing" checked class="accent-emerald-600 rounded scale-90 sm:scale-100">
+            <span class="font-medium text-slate-800">108 Corridor Routing</span>
           </label>
         </div>
       </div>
     </div>
 
     <!-- MOBILE BACKDROP OVERLAY -->
-    <div id="mobile-dock-backdrop" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-30 hidden lg:hidden transition-opacity duration-300"></div>
+    <div id="mobile-dock-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-30 hidden lg:hidden transition-opacity duration-300"></div>
 
-    <!-- RIGHT INTELLIGENCE & CONTROL DOCK -->
-    <aside id="intelligence-dock" class="fixed lg:static inset-x-0 bottom-0 top-auto h-[78vh] max-h-[580px] lg:h-auto lg:w-96 w-full bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-700 lg:border-slate-800 flex flex-col z-40 shadow-2xl transition-transform duration-300 ease-in-out transform translate-y-full lg:translate-y-0 rounded-t-2xl lg:rounded-none">
+    <!-- RIGHT INTELLIGENCE & CONTROL DOCK (Government Office / ICCC Palette) -->
+    <aside id="intelligence-dock" class="fixed lg:static inset-x-0 bottom-0 top-auto h-[80vh] max-h-[600px] lg:h-auto lg:w-96 w-full bg-[#F8FAFC] border-t lg:border-t-0 lg:border-l border-slate-300 flex flex-col z-40 shadow-xl transition-transform duration-300 ease-in-out transform translate-y-full lg:translate-y-0 rounded-t-xl lg:rounded-none">
       
       <!-- MOBILE DRAWER HANDLE & HEADER -->
-      <div class="lg:hidden flex items-center justify-between px-4 py-2.5 bg-slate-950 border-b border-slate-800 rounded-t-2xl shrink-0">
+      <div class="lg:hidden flex items-center justify-between px-4 py-2 bg-[#0A2540] text-white border-b border-slate-700 rounded-t-xl shrink-0">
         <div class="flex items-center gap-2">
-          <div class="w-8 h-1 rounded-full bg-slate-700 mx-auto -mt-1 mb-1 absolute left-1/2 -translate-x-1/2 top-2"></div>
-          <span class="font-bold text-xs text-cyan-400 flex items-center gap-1.5 mt-0.5">
-            <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
-            Kairos Intelligence &amp; Controls
+          <div class="w-8 h-1 rounded-full bg-slate-400 mx-auto -mt-1 mb-1 absolute left-1/2 -translate-x-1/2 top-2"></div>
+          <span class="font-bold text-xs text-white flex items-center gap-1.5 mt-0.5">
+            <i data-lucide="shield" class="w-3.5 h-3.5 text-amber-400"></i>
+            Hydraulic Decision Support &amp; SITREP
           </span>
         </div>
-        <button id="mobile-dock-close-btn" class="p-1 rounded bg-slate-800 text-slate-300 hover:text-white mt-0.5" title="Close Drawer">
+        <button id="mobile-dock-close-btn" class="p-1 rounded bg-[#0F3254] text-slate-200 hover:text-white mt-0.5" title="Close Drawer">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
 
-      <!-- DOCK NAVIGATION TABS -->
-      <div class="flex border-b border-slate-800 bg-slate-950/60 p-1 text-xs font-medium shrink-0">
-        <button id="tab-routing-btn" class="flex-1 py-2 rounded text-center transition flex items-center justify-center gap-1.5 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30">
-          <i data-lucide="navigation-2" class="w-3.5 h-3.5"></i>
-          <span>A* Safe Route</span>
+      <!-- DOCK NAVIGATION TABS (Government Navy / White Clean Buttons) -->
+      <div class="flex border-b border-slate-300 bg-slate-200/90 p-1 text-xs font-semibold shrink-0 gap-1">
+        <button id="tab-routing-btn" class="flex-1 py-1.5 rounded text-center transition flex items-center justify-center gap-1.5 bg-[#0A2540] text-white shadow-xs">
+          <i data-lucide="navigation" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>108 Route</span>
         </button>
-        <button id="tab-inspector-btn" class="flex-1 py-2 rounded text-center transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200">
-          <i data-lucide="info" class="w-3.5 h-3.5"></i>
-          <span>Diagnostic Card</span>
+        <button id="tab-inspector-btn" class="flex-1 py-1.5 rounded text-center transition flex items-center justify-center gap-1.5 text-slate-700 hover:bg-white/80">
+          <i data-lucide="file-check" class="w-3.5 h-3.5"></i>
+          <span>Field Slip</span>
         </button>
-        <button id="tab-clogging-btn" class="flex-1 py-2 rounded text-center transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200">
+        <button id="tab-clogging-btn" class="flex-1 py-1.5 rounded text-center transition flex items-center justify-center gap-1.5 text-slate-700 hover:bg-white/80">
           <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
-          <span>Clogging &mu;</span>
+          <span>Desilting &mu;</span>
         </button>
       </div>
 
       <!-- TAB CONTENT CONTAINER -->
-      <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+      <div class="flex-1 overflow-y-auto p-3.5 space-y-3.5 text-xs text-slate-800">
 
         <!-- TAB 1: EMERGENCY A* ROUTING -->
-        <div id="tab-routing" class="space-y-4">
-          <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-3">
-            <div class="font-bold text-slate-200 flex items-center justify-between">
+        <div id="tab-routing" class="space-y-3">
+          <div class="bg-white border border-slate-300 rounded p-3 space-y-2.5 shadow-xs">
+            <div class="font-bold text-slate-900 flex items-center justify-between border-b border-slate-200 pb-1.5">
               <span class="flex items-center gap-1.5">
-                <i data-lucide="ambulance" class="w-4 h-4 text-cyan-400"></i>
-                Emergency Responder Routing
+                <i data-lucide="ambulance" class="w-4 h-4 text-red-600"></i>
+                Emergency Medical Response Corridor
               </span>
-              <span class="text-[10px] px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">A* Graph Solver</span>
+              <span class="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">NDMA A* Engine</span>
             </div>
 
             <!-- Vehicle Selector (R4) -->
             <div>
-              <label class="block text-slate-400 text-[11px] mb-1">Vehicle Classification &amp; Clearance Limit:</label>
-              <select id="vehicle-select" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded p-2 focus:outline-none focus:border-cyan-500 font-medium text-xs">
+              <label class="block text-slate-600 text-[11px] font-medium mb-1">Emergency Vehicle &amp; Safe Clearance Limit:</label>
+              <select id="vehicle-select" class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-600 font-medium text-xs">
                 <option value="ambulance" data-limit="30">🚑 108 Emergency Ambulance (Clearance: 30 cm)</option>
                 <option value="bus" data-limit="45">🚒 NDRF Rescue Heavy Truck / Bus (Clearance: 45 cm)</option>
-                <option value="car" data-limit="18">🚗 Civilian Passenger Car / Sedan (Clearance: 18 cm)</option>
-                <option value="bike" data-limit="10">🛵 Two-Wheeler / Auto-Rickshaw (Clearance: 10 cm)</option>
+                <option value="car" data-limit="18">🚗 Government Liaison / Official Sedan (Clearance: 18 cm)</option>
+                <option value="bike" data-limit="10">🛵 First Responder Patrol Bike (Clearance: 10 cm)</option>
               </select>
             </div>
 
             <!-- Scenario Route Picker (R4) -->
             <div>
-              <label class="block text-slate-400 text-[11px] mb-1">Emergency Evacuation Corridor:</label>
-              <select id="route-scenario-select" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded p-2 focus:outline-none focus:border-cyan-500 font-medium text-xs">
+              <label class="block text-slate-600 text-[11px] font-medium mb-1">Evacuation Route Corridor:</label>
+              <select id="route-scenario-select" class="w-full bg-slate-50 border border-slate-300 text-slate-900 rounded p-1.5 focus:outline-none focus:ring-1 focus:ring-blue-600 font-medium text-xs">
                 <option value="scenario1">Velachery Lake Colony → Guindy Trauma Hospital</option>
                 <option value="scenario2">Kilpauk Medical College → Chennai Central</option>
               </select>
@@ -370,65 +455,65 @@
           </div>
 
           <!-- ROUTE COMPARISON CARDS -->
-          <div class="space-y-3">
+          <div class="space-y-2.5">
             <!-- Trapped / Flooded Route Card -->
-            <div class="bg-red-950/30 border border-red-900/60 rounded-lg p-3 space-y-2">
+            <div class="bg-red-50 border border-red-300 rounded p-3 space-y-2">
               <div class="flex items-center justify-between">
-                <span class="font-bold text-red-400 flex items-center gap-1.5">
-                  <i data-lucide="alert-octagon" class="w-4 h-4"></i>
+                <span class="font-bold text-red-800 flex items-center gap-1.5">
+                  <i data-lucide="alert-octagon" class="w-4 h-4 text-red-600"></i>
                   <span id="route-direct-title">Direct Standard Route (Trapped)</span>
                 </span>
-                <span id="route-direct-badge" class="text-[10px] bg-red-900/40 text-red-300 px-1.5 py-0.5 rounded border border-red-800/40 font-mono font-bold">Bottleneck</span>
+                <span id="route-direct-badge" class="text-[10px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded border border-red-300 font-mono font-bold">Impassable</span>
               </div>
-              <div class="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-red-900/40 font-mono">
-                <div>Distance: <span id="route-direct-dist" class="text-slate-200 font-semibold">4.8 km</span></div>
-                <div>Est. ETA: <span id="route-direct-eta" class="text-slate-200 font-semibold">14.0 min</span></div>
-                <div class="col-span-2 text-red-300 font-semibold">
-                  Peak Water Depth: <span id="route-direct-depth" class="text-red-400 font-bold underline">52.4 cm</span>
-                  <span id="route-direct-clearance-warn" class="text-red-300 text-[10px] block font-normal">(Exceeds 30cm Limit by 22.4cm!)</span>
+              <div class="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-red-200 font-mono">
+                <div class="text-slate-700">Distance: <span id="route-direct-dist" class="text-slate-900 font-semibold">4.8 km</span></div>
+                <div class="text-slate-700">Est. ETA: <span id="route-direct-eta" class="text-slate-900 font-semibold">14.0 min</span></div>
+                <div class="col-span-2 text-red-800 font-semibold">
+                  Peak Water Depth: <span id="route-direct-depth" class="text-red-700 font-bold underline">52.4 cm</span>
+                  <span id="route-direct-clearance-warn" class="text-red-700 text-[10px] block font-normal">(Exceeds 30cm Limit by 22.4cm!)</span>
                 </div>
               </div>
-              <p id="route-direct-msg" class="text-[11px] text-red-300/90 bg-red-950/60 p-2 rounded border border-red-900/40 leading-relaxed">
+              <p id="route-direct-msg" class="text-[11px] text-red-900 bg-white/80 p-2 rounded border border-red-200 leading-relaxed font-sans">
                 ⚠️ CRITICAL: Underpass submerged. Hydrostatic engine hydrolock risk. Vehicle stall guaranteed.
               </p>
             </div>
 
             <!-- Kairos A* Safe Bypass Card -->
-            <div class="bg-emerald-950/30 border border-emerald-900/60 rounded-lg p-3 space-y-2">
+            <div class="bg-emerald-50 border border-emerald-300 rounded p-3 space-y-2">
               <div class="flex items-center justify-between">
-                <span class="font-bold text-emerald-400 flex items-center gap-1.5">
-                  <i data-lucide="shield-check" class="w-4 h-4"></i>
-                  <span id="route-safe-title">Kairos A* Safe Bypass (Calculated)</span>
+                <span class="font-bold text-emerald-900 flex items-center gap-1.5">
+                  <i data-lucide="shield-check" class="w-4 h-4 text-emerald-600"></i>
+                  <span id="route-safe-title">Official Resilient Bypass Corridor</span>
                 </span>
-                <span id="route-safe-badge" class="text-[10px] bg-emerald-900/40 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-800/40 font-mono font-bold">Recommended</span>
+                <span id="route-safe-badge" class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-300 font-mono font-bold">Recommended</span>
               </div>
-              <div class="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-emerald-900/40 font-mono">
-                <div>Distance: <span id="route-safe-dist" class="text-slate-200 font-semibold">5.6 km (+0.8 km)</span></div>
-                <div>Est. ETA: <span id="route-safe-eta" class="text-slate-200 font-semibold">17.2 min (+3.2 min)</span></div>
-                <div class="col-span-2 text-emerald-300 font-semibold">
-                  Max Flood Depth: <span id="route-safe-depth" class="text-emerald-400 font-bold underline">8.5 cm</span>
-                  <span id="route-safe-clearance-margin" class="text-emerald-300 text-[10px] block font-normal">(Safety Margin: +21.5 cm)</span>
+              <div class="grid grid-cols-2 gap-2 text-[11px] pt-1 border-t border-emerald-200 font-mono">
+                <div class="text-slate-700">Distance: <span id="route-safe-dist" class="text-slate-900 font-semibold">5.6 km (+0.8 km)</span></div>
+                <div class="text-slate-700">Est. ETA: <span id="route-safe-eta" class="text-slate-900 font-semibold">17.2 min (+3.2 min)</span></div>
+                <div class="col-span-2 text-emerald-800 font-semibold">
+                  Max Flood Depth: <span id="route-safe-depth" class="text-emerald-700 font-bold underline">8.5 cm</span>
+                  <span id="route-safe-clearance-margin" class="text-emerald-700 text-[10px] block font-normal">(Safety Margin: +21.5 cm)</span>
                 </div>
               </div>
-              <p id="route-safe-msg" class="text-[11px] text-emerald-300/90 bg-emerald-950/60 p-2 rounded border border-emerald-900/40 leading-relaxed">
-                ✅ 100% CLEAR: Rerouted via Velachery Bypass elevated ridge. Complete safety margin maintained for ICU life support.
+              <p id="route-safe-msg" class="text-[11px] text-emerald-900 bg-white/80 p-2 rounded border border-emerald-200 leading-relaxed font-sans">
+                ✅ 100% CLEAR: Rerouted via Velachery Bypass elevated ridge. Complete safety margin maintained for emergency transit.
               </p>
             </div>
           </div>
 
           <!-- TURN BY TURN GUIDANCE -->
-          <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-2">
-            <div class="font-bold text-slate-300 flex items-center justify-between">
+          <div class="bg-white border border-slate-300 rounded p-3 space-y-2 shadow-xs">
+            <div class="font-bold text-slate-800 flex items-center justify-between border-b border-slate-200 pb-1">
               <span class="flex items-center gap-1.5">
-                <i data-lucide="milestone" class="w-3.5 h-3.5 text-cyan-400"></i>
-                Turn-by-Turn Dynamic Navigation Cues
+                <i data-lucide="milestone" class="w-3.5 h-3.5 text-blue-700"></i>
+                Emergency Transit Navigation Advisories
               </span>
-              <span id="route-destination-badge" class="text-[10px] font-mono text-cyan-400 bg-cyan-950/50 px-1.5 py-0.5 rounded border border-cyan-800/40">Guindy Trauma Hospital</span>
+              <span id="route-destination-badge" class="text-[10px] font-mono text-blue-800 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">Guindy Trauma Hospital</span>
             </div>
-            <ul id="route-turn-by-turn" class="space-y-1.5 text-[11px] text-slate-300 list-disc list-inside">
+            <ul id="route-turn-by-turn" class="space-y-1.5 text-[11px] text-slate-700 list-disc list-inside">
               <li>Depart Velachery Lake Residential Area (Elev: 8.2m MSL). Flood depth: 4.2 cm.</li>
-              <li><strong class="text-amber-300">Avoid 100 Feet Road:</strong> Submerged to 52.4 cm (Engine Hydrolock Hazard).</li>
-              <li><strong class="text-emerald-300">Turn Right onto Bypass Ridge:</strong> Water depth 8.5 cm.</li>
+              <li><strong class="text-red-700">Avoid 100 Feet Road:</strong> Submerged to 52.4 cm (Engine Hydrolock Hazard).</li>
+              <li><strong class="text-emerald-700">Turn Right onto Bypass Ridge:</strong> Water depth 8.5 cm.</li>
               <li>Arrive Guindy Trauma Hospital (Elev: 12.1m MSL) via safe corridor.</li>
             </ul>
           </div>
@@ -436,269 +521,288 @@
 
         <!-- TAB 2: SURCHARGE DIAGNOSTIC INSPECTOR -->
         <div id="tab-inspector" class="space-y-3 hidden">
-          <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-3">
-            <div class="font-bold text-slate-200 flex items-center justify-between">
+          <div class="bg-white border border-slate-300 rounded p-3 space-y-2.5 shadow-xs">
+            <div class="font-bold text-slate-900 flex items-center justify-between border-b border-slate-200 pb-1.5">
               <span class="flex items-center gap-1.5">
-                <i data-lucide="gauge" class="w-4 h-4 text-amber-400"></i>
-                Asset Hydro-Telemetry Inspector
+                <i data-lucide="clipboard-list" class="w-4 h-4 text-blue-700"></i>
+                CPHEEO Hydraulic Field Slip
               </span>
-              <span class="text-[10px] text-cyan-400 font-mono px-1.5 py-0.5 rounded bg-cyan-950 border border-cyan-800" id="inspector-asset-id">CHN_SEG_00412</span>
+              <span class="text-[10px] text-slate-800 font-mono px-1.5 py-0.5 rounded bg-slate-100 border border-slate-300 font-bold" id="inspector-asset-id">CHN_SEG_00412</span>
             </div>
 
-            <div class="space-y-2 text-[11px]">
-              <div class="flex justify-between border-b border-slate-800/80 pb-1">
-                <span class="text-slate-400">Zone &amp; Corridor:</span>
-                <span class="text-slate-200 font-semibold" id="inspector-zone">Zone 14 (Perungudi / Velachery)</span>
+            <div class="space-y-1.5 text-[11px]">
+              <div class="flex justify-between border-b border-slate-100 pb-1">
+                <span class="text-slate-500">Zone &amp; Corridor:</span>
+                <span class="text-slate-900 font-semibold" id="inspector-zone">Zone 14 (Perungudi / Velachery)</span>
               </div>
-              <div class="flex justify-between border-b border-slate-800/80 pb-1">
-                <span class="text-slate-400">Surface Elevation (Z_ground):</span>
-                <span class="text-slate-200 font-mono" id="inspector-elevation">4.15 m MSL</span>
+              <div class="flex justify-between border-b border-slate-100 pb-1">
+                <span class="text-slate-500">Surface Elevation (Z_ground):</span>
+                <span class="text-slate-900 font-mono font-medium" id="inspector-elevation">4.15 m MSL</span>
               </div>
-              <div class="flex justify-between border-b border-slate-800/80 pb-1">
-                <span class="text-slate-400">Drain / Frame Diameter (D):</span>
-                <span class="text-slate-200 font-mono" id="inspector-dia">600 mm (RCC Hume)</span>
+              <div class="flex justify-between border-b border-slate-100 pb-1">
+                <span class="text-slate-500">SWD / Manhole Diameter (D):</span>
+                <span class="text-slate-900 font-mono font-medium" id="inspector-dia">600 mm (RCC Hume)</span>
               </div>
-              <div class="flex justify-between border-b border-slate-800/80 pb-1">
-                <span class="text-slate-400">Manning Roughness (n):</span>
-                <span class="text-slate-200 font-mono" id="inspector-manning">0.015 (RCC Pipe / CPHEEO)</span>
+              <div class="flex justify-between border-b border-slate-100 pb-1">
+                <span class="text-slate-500">Manning Roughness (n):</span>
+                <span class="text-slate-900 font-mono font-medium" id="inspector-manning">0.015 (CPHEEO Standard)</span>
               </div>
-              <div class="flex justify-between border-b border-slate-800/80 pb-1">
-                <span class="text-slate-400">Theoretical Full-Bore Cap (Q₀):</span>
-                <span class="text-slate-200 font-mono" id="inspector-theor-cap">0.317 m³/s</span>
+              <div class="flex justify-between border-b border-slate-100 pb-1">
+                <span class="text-slate-500">Full-Bore Theoretical (Q₀):</span>
+                <span class="text-slate-900 font-mono font-medium" id="inspector-theor-cap">0.317 m³/s</span>
               </div>
-              <div class="flex justify-between border-b border-slate-800/80 pb-1">
-                <span class="text-slate-400">Dynamic Clogging Factor (&mu;):</span>
-                <span class="text-amber-400 font-mono font-bold" id="inspector-clog">0.38 (38% Reduction)</span>
+              <div class="flex justify-between border-b border-slate-100 pb-1">
+                <span class="text-slate-500">Dynamic Clogging Factor (&mu;):</span>
+                <span class="text-amber-700 font-mono font-bold" id="inspector-clog">0.38 (38% Reduction)</span>
               </div>
-              <div class="flex justify-between border-b border-slate-800/80 pb-1">
-                <span class="text-slate-400">Effective Drainage Cap (Q_eff):</span>
-                <span class="text-slate-200 font-mono" id="inspector-eff-cap">0.196 m³/s</span>
+              <div class="flex justify-between border-b border-slate-100 pb-1">
+                <span class="text-slate-500">Effective Drainage Cap (Q_eff):</span>
+                <span class="text-slate-900 font-mono font-medium" id="inspector-eff-cap">0.196 m³/s</span>
               </div>
-              <div class="flex justify-between border-b border-slate-800/80 pb-1">
-                <span class="text-slate-400">Hydraulic Grade Line (HGL):</span>
-                <span class="text-red-400 font-mono font-bold" id="inspector-hgl">4.82 m (Surcharge Head: +0.67m)</span>
+              <div class="flex justify-between border-b border-slate-100 pb-1">
+                <span class="text-slate-500">Hydraulic Grade Line (HGL):</span>
+                <span class="text-red-700 font-mono font-bold" id="inspector-hgl">4.82 m (+0.67m Surcharge)</span>
               </div>
-              <div class="flex justify-between border-b border-slate-800/80 pb-1">
-                <span class="text-slate-400">Backflow Orifice Rate (Q_backflow):</span>
-                <span class="text-red-400 font-mono font-bold" id="inspector-backflow">0.421 m³/s</span>
+              <div class="flex justify-between border-b border-slate-100 pb-1">
+                <span class="text-slate-500">Backflow Orifice Rate (Q_bf):</span>
+                <span class="text-red-700 font-mono font-bold" id="inspector-backflow">0.421 m³/s</span>
               </div>
               <div class="flex justify-between pt-1">
-                <span class="text-slate-400">Predicted Street Inundation:</span>
-                <span class="text-rose-400 font-mono font-bold text-sm" id="inspector-depth">48.2 cm</span>
+                <span class="text-slate-700 font-semibold">Street Inundation Depth:</span>
+                <span class="text-red-700 font-mono font-bold text-sm" id="inspector-depth">48.2 cm</span>
               </div>
             </div>
           </div>
 
-          <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-2">
-            <div class="font-bold text-slate-300 text-[11px] flex items-center gap-1.5">
-              <i data-lucide="wrench" class="w-3.5 h-3.5 text-cyan-400"></i>
-              Manning-Saint-Venant Hydraulic Equations
+          <div class="bg-white border border-slate-300 rounded p-3 space-y-2 shadow-xs">
+            <div class="font-bold text-slate-800 text-[11px] flex items-center gap-1.5">
+              <i data-lucide="calculator" class="w-3.5 h-3.5 text-blue-700"></i>
+              Governing Hydraulic Specifications (CPHEEO)
             </div>
-            <p class="text-[10px] text-slate-400 leading-relaxed font-mono bg-slate-900 p-2 rounded border border-slate-800">
+            <div class="text-[10px] text-slate-700 leading-relaxed font-mono bg-slate-50 p-2 rounded border border-slate-200">
               Q₀ = (1/n) &times; A &times; R^(2/3) &times; S^(1/2)<br>
               Q_eff = Q₀ &times; (1 - &mu;_clog)<br>
               &Delta;h = max(0, HGL - Z_ground)<br>
               Q_backflow = C_d &times; A_manhole &times; &radic;(2g &Delta;h) [C_d=0.62]
-            </p>
-            <p class="text-[11px] text-slate-300">
-              Click any road segment or pulsing manhole marker on the map to inspect its real-time hydraulic parameters.
+            </div>
+            <p class="text-[11px] text-slate-600">
+              Click any road segment or surcharging manhole on the map to view verified field telemetry.
             </p>
           </div>
         </div>
 
         <!-- TAB 3: DYNAMIC CLOGGING SIMULATOR -->
-        <div id="tab-clogging" class="space-y-4 hidden">
-          <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-3">
-            <div class="font-bold text-slate-200 flex items-center justify-between">
+        <div id="tab-clogging" class="space-y-3 hidden">
+          <div class="bg-white border border-slate-300 rounded p-3 space-y-2.5 shadow-xs">
+            <div class="font-bold text-slate-900 flex items-center justify-between border-b border-slate-200 pb-1.5">
               <span class="flex items-center gap-1.5">
-                <i data-lucide="trash-2" class="w-4 h-4 text-amber-400"></i>
-                Solid Waste &amp; Silt Clogging Simulator
+                <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-600"></i>
+                Pre-Monsoon Desilting Index
               </span>
-              <span id="clogging-pct-badge" class="text-xs font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">35% Clogging</span>
+              <span id="clogging-pct-badge" class="text-xs font-mono font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded border border-amber-300">35% Silt Deficit</span>
             </div>
-            <p class="text-[11px] text-slate-400 leading-relaxed">
-              Simulate the direct impact of pre-monsoon desilting deficit and plastic debris accumulation on stormwater conduit carrying capacity.
+            <p class="text-[11px] text-slate-600 leading-relaxed">
+              Stress-test conduit conveyance loss under varying GCC pre-monsoon desilting and solid waste accumulation indices.
             </p>
 
-            <div class="space-y-2 pt-2">
-              <div class="flex justify-between text-xs">
-                <span class="text-slate-400">Clogging Factor (&mu;_clog):</span>
-                <span id="clog-val-label" class="font-mono font-bold text-cyan-400">0.35</span>
+            <div class="space-y-1.5 pt-1">
+              <div class="flex justify-between text-xs font-medium">
+                <span class="text-slate-600">Conduit Resistance Factor (&mu;_clog):</span>
+                <span id="clog-val-label" class="font-mono font-bold text-[#0A2540]">0.35</span>
               </div>
-              <input type="range" id="clog-slider" min="0" max="80" value="35" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500">
+              <input type="range" id="clog-slider" min="0" max="80" value="35" class="w-full h-2 bg-slate-200 rounded appearance-none cursor-pointer accent-[#0A2540]">
               <div class="flex justify-between text-[10px] text-slate-500 font-mono">
                 <span>0% (Clean Desilted)</span>
-                <span>40% (Average GCC)</span>
-                <span>80% (Severe Choke)</span>
+                <span>40% (GCC CMA Mean)</span>
+                <span>80% (Severe Silt)</span>
               </div>
             </div>
           </div>
 
-          <div class="bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-2">
-            <div class="font-bold text-slate-300 text-xs">Dynamic Impact on City Resilience:</div>
+          <div class="bg-white border border-slate-300 rounded p-3 space-y-2 shadow-xs">
+            <div class="font-bold text-slate-800 text-xs">Simulated Hydraulic Impact:</div>
             <div class="space-y-1.5 text-[11px]">
               <div class="flex justify-between">
-                <span class="text-slate-400">Effective Drain Capacity:</span>
-                <span id="clog-capacity-impact" class="font-mono font-bold text-emerald-400">65% of Rated Spec</span>
+                <span class="text-slate-600">Effective SWD Capacity:</span>
+                <span id="clog-capacity-impact" class="font-mono font-bold text-emerald-700">65% of Rated Design</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-slate-400">Backflow Surcharging Nodes:</span>
-                <span id="clog-nodes-impact" class="font-mono font-bold text-amber-400">19 Hotspots Active</span>
+                <span class="text-slate-600">Active Surcharge Nodes:</span>
+                <span id="clog-nodes-impact" class="font-mono font-bold text-amber-700">19 Hotspots Active</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-slate-400">Average Water Depth Rise:</span>
-                <span id="clog-depth-impact" class="font-mono font-bold text-red-400">+8.4 cm</span>
+                <span class="text-slate-600">Mean Inundation Increment:</span>
+                <span id="clog-depth-impact" class="font-mono font-bold text-red-700">+8.4 cm</span>
               </div>
             </div>
-            <button id="reset-clog-btn" class="w-full mt-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded py-1.5 font-medium transition text-xs">
-              Reset to GCC Ground Survey Baseline
+            <button id="reset-clog-btn" class="w-full mt-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded py-1.5 font-medium transition text-xs">
+              Reset to GCC Baseline Survey (35%)
             </button>
           </div>
         </div>
 
       </div>
 
-      <!-- FOOTER TELEMETRY -->
-      <div class="p-3 bg-slate-950 border-t border-slate-800 text-[10px] text-slate-500 flex items-center justify-between">
-        <span>Team Kairos • SIH 2026</span>
-        <span class="flex items-center gap-1">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-          REST API: Connected
+      <!-- FOOTER TELEMETRY (Official Civic ICCC Format) -->
+      <div class="p-2.5 bg-slate-100 border-t border-slate-300 text-[10px] text-slate-600 flex items-center justify-between font-medium">
+        <span>MoES NCMRWF • GCC ICCC Integrated</span>
+        <span class="flex items-center gap-1.5 text-emerald-700 font-semibold">
+          <span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+          ICCC Link: Live
         </span>
       </div>
     </aside>
 
   </main>
 
-  <!-- BOTTOM DOCK: 0-180 MINUTE TIME SLIDER & PLAYBACK -->
-  <footer class="bg-slate-900/95 backdrop-blur border-t border-slate-800 px-3 sm:px-6 py-2 sm:py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-6 z-20 shrink-0">
+  <!-- BOTTOM DOCK: 0-180 MINUTE NOWCAST HORIZON (Official IMD Navy/Tricolor Style) -->
+  <footer class="bg-[#0B1E36] text-white border-t-2 border-[#FF9933] px-3 sm:px-6 py-2 sm:py-2.5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-6 z-20 shrink-0 shadow-lg">
     
     <!-- Top row on mobile / Left group on desktop: Playback Controls & Time Display -->
     <div class="flex items-center justify-between sm:justify-start gap-2.5 sm:gap-4 shrink-0">
       <div class="flex items-center gap-1.5 sm:gap-2">
-        <button id="play-pause-btn" class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white flex items-center justify-center transition shadow-lg shadow-cyan-600/30">
-          <i data-lucide="play" class="w-4 h-4 sm:w-5 sm:h-5 ml-0.5" id="play-icon"></i>
+        <button id="play-pause-btn" class="w-8 h-8 sm:w-9 sm:h-9 rounded bg-[#138808] hover:bg-emerald-600 text-white flex items-center justify-center transition shadow">
+          <i data-lucide="play" class="w-4 h-4 sm:w-4 sm:h-4 ml-0.5" id="play-icon"></i>
         </button>
-        <button id="reset-time-btn" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 flex items-center justify-center transition" title="Reset to T+0 (Now)">
+        <button id="reset-time-btn" class="w-7 h-7 sm:w-8 sm:h-8 rounded bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 flex items-center justify-center transition" title="Reset to T+0 (Now)">
           <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
         </button>
       </div>
 
       <!-- Active Time Display -->
       <div class="shrink-0 flex items-baseline gap-1.5 sm:block sm:w-32">
-        <div class="text-[9px] sm:text-[10px] text-slate-400 uppercase font-bold tracking-wider hidden sm:block">Nowcast Horizon</div>
+        <div class="text-[9px] sm:text-[10px] text-slate-300 uppercase font-bold tracking-wider hidden sm:block">IMD Nowcast Horizon</div>
         <div class="flex items-baseline gap-1.5">
-          <span id="time-display" class="text-base sm:text-xl font-bold font-mono text-cyan-400">T + 60m</span>
-          <span id="time-clock" class="text-[10px] sm:text-xs text-slate-400 font-mono">(19:40 IST)</span>
+          <span id="time-display" class="text-base sm:text-lg font-bold font-mono text-amber-400">T + 60m</span>
+          <span id="time-clock" class="text-[10px] sm:text-xs text-slate-300 font-mono">(19:40 IST)</span>
         </div>
       </div>
 
       <!-- Quick Drawer Trigger on Mobile -->
-      <button id="mobile-dock-toggle-btn-bottom" class="sm:hidden text-cyan-400 text-[11px] font-bold flex items-center gap-1 bg-cyan-500/10 px-2 py-1 rounded border border-cyan-500/20 active:bg-cyan-500/20 transition">
+      <button id="mobile-dock-toggle-btn-bottom" class="sm:hidden text-amber-300 text-[11px] font-bold flex items-center gap-1 bg-amber-500/20 px-2 py-1 rounded border border-amber-400/40 active:bg-amber-500/30 transition">
         <i data-lucide="sliders" class="w-3 h-3"></i>
-        <span>Details</span>
+        <span>Command</span>
       </button>
     </div>
 
     <!-- Slider Track & Dynamic Hyetograph Mini-Sparkline (R3) -->
     <div class="flex-1 space-y-1">
-      <div class="flex justify-between items-center text-[10px] sm:text-[11px] font-mono font-medium text-slate-400 px-1">
-        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="0">T+0</span>
-        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="1">T+30m</span>
-        <span class="hover:text-cyan-400 cursor-pointer step-tick text-cyan-400 font-bold" data-step="2">T+60m</span>
-        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="3">T+90m</span>
-        <span class="hover:text-cyan-400 cursor-pointer step-tick hidden xs:inline" data-step="4">T+120m</span>
-        <span class="hover:text-cyan-400 cursor-pointer step-tick" data-step="5">T+180m</span>
+      <div class="flex justify-between items-center text-[10px] sm:text-[11px] font-mono font-medium text-slate-300 px-1">
+        <span class="hover:text-amber-300 cursor-pointer step-tick" data-step="0">T+0</span>
+        <span class="hover:text-amber-300 cursor-pointer step-tick" data-step="1">T+30m</span>
+        <span class="hover:text-amber-300 cursor-pointer step-tick text-amber-400 font-bold" data-step="2">T+60m</span>
+        <span class="hover:text-amber-300 cursor-pointer step-tick" data-step="3">T+90m</span>
+        <span class="hover:text-amber-300 cursor-pointer step-tick hidden xs:inline" data-step="4">T+120m</span>
+        <span class="hover:text-amber-300 cursor-pointer step-tick" data-step="5">T+180m</span>
       </div>
 
-      <input type="range" id="time-slider" min="0" max="5" value="2" step="1" class="w-full h-2.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500">
+      <input type="range" id="time-slider" min="0" max="5" value="2" step="1" class="w-full h-2 bg-slate-700 rounded appearance-none cursor-pointer accent-[#FF9933]">
       
       <!-- Dynamic SVG Hyetograph Mini Sparkline Chart (R3) -->
-      <div class="relative w-full h-7">
-        <svg id="hyetograph-sparkline" class="w-full h-full" viewBox="0 0 600 28" preserveAspectRatio="none">
+      <div class="relative w-full h-6">
+        <svg id="hyetograph-sparkline" class="w-full h-full" viewBox="0 0 600 24" preserveAspectRatio="none">
           <defs>
             <linearGradient id="rainGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.5"/>
-              <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.02"/>
+              <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.6"/>
+              <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.05"/>
             </linearGradient>
           </defs>
-          <polygon id="sparkline-area" fill="url(#rainGrad)" points="0,28 0,28 600,28"/>
-          <polyline id="sparkline-line" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="0,28 600,28"/>
+          <polygon id="sparkline-area" fill="url(#rainGrad)" points="0,24 0,24 600,24"/>
+          <polyline id="sparkline-line" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="0,24 600,24"/>
           <g id="sparkline-dots"></g>
-          <line id="sparkline-cursor" x1="240" y1="0" x2="240" y2="28" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2,2"/>
+          <line id="sparkline-cursor" x1="240" y1="0" x2="240" y2="24" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2,2"/>
         </svg>
       </div>
 
       <!-- Dynamic Storm Intensity Labels -->
-      <div id="hyetograph-labels" class="flex items-center justify-between text-[10px] text-slate-400 font-mono px-1">
+      <div id="hyetograph-labels" class="flex items-center justify-between text-[10px] text-slate-300 font-mono px-1">
         <span>T0: 12.4 mm/h</span>
         <span>T30: 38.6 mm/h</span>
-        <span class="text-cyan-400 font-bold">T60: 84.2 mm/h</span>
+        <span class="text-amber-300 font-bold">T60: 84.2 mm/h</span>
         <span class="text-red-400 font-bold">T90: 95.0 mm/h</span>
         <span>T120: 62.5 mm/h</span>
         <span>T180: 24.1 mm/h</span>
       </div>
     </div>
 
-    <!-- Auto-Advance Speed Badge -->
-    <div class="shrink-0 flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/60 rounded-lg px-2.5 py-1.5 text-xs text-slate-300">
-      <i data-lucide="gauge" class="w-3.5 h-3.5 text-cyan-400"></i>
-      <span class="font-mono">Speed: 1x (Auto)</span>
+    <!-- IMD Radar Status Badge -->
+    <div class="shrink-0 flex items-center gap-1.5 bg-[#0F3254] border border-blue-400/30 rounded px-2.5 py-1 text-xs text-slate-200">
+      <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+      <span class="font-mono text-[11px]">IMD Radar: Synchronized</span>
     </div>
 
   </footer>
 
-  <!-- BOLT.NEW 1-CLICK CLOUD EXPORT MODAL (R6) -->
-  <div id="bolt-export-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden">
-      <!-- Modal Header -->
-      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
-        <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-            <i data-lucide="zap" class="w-4 h-4 fill-current"></i>
+  <!-- OFFICIAL SITREP DISASTER ADVISORY BULLETIN MODAL (Replacing Bolt.new modal) -->
+  <div id="bolt-export-modal" class="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-xs hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white border border-slate-400 rounded-lg shadow-2xl max-w-2xl w-full max-h-[92vh] flex flex-col overflow-hidden text-slate-800">
+      
+      <!-- Official Government Letterhead Header -->
+      <div class="px-5 py-3.5 border-b border-slate-300 bg-[#0A2540] text-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded bg-white p-1 flex items-center justify-center shrink-0">
+            <svg viewBox="0 0 100 100" class="w-full h-full text-[#0B1E36]">
+              <circle cx="50" cy="50" r="46" fill="none" stroke="#0A2540" stroke-width="4"/>
+              <circle cx="50" cy="50" r="38" fill="#F8FAFC" stroke="#FF9933" stroke-width="1.5"/>
+              <circle cx="50" cy="50" r="8" fill="#0A2540"/>
+              <g stroke="#0A2540" stroke-width="1.2">
+                <line x1="50" y1="50" x2="50" y2="12" />
+                <line x1="50" y1="50" x2="50" y2="88" />
+                <line x1="50" y1="50" x2="12" y2="50" />
+                <line x1="50" y1="50" x2="88" y2="50" />
+              </g>
+            </svg>
           </div>
           <div>
-            <h3 class="font-bold text-sm text-white">1-Click Cloud Migration &amp; Bolt.new Export</h3>
-            <p class="text-[11px] text-slate-400">React 19 + Vite + Tailwind CSS Architecture Prompt</p>
+            <h3 class="font-bold text-xs sm:text-sm tracking-wide uppercase">Disaster Management Division • Situation Report (SITREP)</h3>
+            <p class="text-[10px] text-slate-300">MoES NCMRWF &amp; Greater Chennai Corporation (GCC) Flood Diagnostic</p>
           </div>
         </div>
-        <button id="close-bolt-modal" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
-          <i data-lucide="x" class="w-4 h-4"></i>
+        <button id="close-bolt-modal" class="text-slate-300 hover:text-white p-1 rounded hover:bg-slate-700 transition" title="Close Bulletin">
+          <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
 
+      <!-- Tricolor Border -->
+      <div class="h-1 w-full flex shrink-0">
+        <div class="w-1/3 bg-[#FF9933]"></div>
+        <div class="w-1/3 bg-slate-200"></div>
+        <div class="w-1/3 bg-[#138808]"></div>
+      </div>
+
       <!-- Modal Body -->
-      <div class="p-5 overflow-y-auto space-y-4 text-xs">
-        <div class="flex flex-wrap gap-2">
-          <span class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-mono text-[10px]">React 19</span>
-          <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono text-[10px]">Vite</span>
-          <span class="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 font-mono text-[10px]">Tailwind CSS</span>
-          <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/30 font-mono text-[10px]">Leaflet / Web GIS</span>
-          <span class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/30 font-mono text-[10px]">Lucide React</span>
+      <div class="p-4 sm:p-5 overflow-y-auto space-y-3 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200">
+          <div>
+            <span class="text-slate-500 font-medium">Bulletin ID:</span>
+            <span class="font-mono font-bold text-slate-900 ml-1">SITREP-CMA-2026-09</span>
+          </div>
+          <div>
+            <span class="text-slate-500 font-medium">Classification:</span>
+            <span class="px-2 py-0.5 rounded bg-red-100 text-red-800 border border-red-200 font-bold font-mono text-[10px]">OPERATIONAL / PRIORITY 1</span>
+          </div>
         </div>
 
-        <p class="text-slate-300 leading-relaxed">
-          Copy the full production architecture prompt below and paste directly into <a href="https://bolt.new" target="_blank" class="text-cyan-400 underline hover:text-cyan-300">Bolt.new</a> to instantly scaffold, build, and deploy the Urban Flood Nowcasting System Command Twin as a production-grade full-stack cloud application.
+        <p class="text-slate-700 leading-relaxed font-serif text-[12px]">
+          The following real-time hydrological diagnostic bulletin has been generated by the <b>KAIROS Hydrodynamic Nowcasting System</b> based on coupled Saint-Venant hydraulic routing across the Greater Chennai Corporation (GCC) drainage network.
         </p>
 
         <div class="relative">
-          <textarea id="bolt-prompt-text" readonly rows="11" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-[11px] text-slate-300 focus:outline-none select-all leading-relaxed"></textarea>
-          <button id="copy-bolt-prompt-btn" class="absolute top-2 right-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow transition">
-            <i data-lucide="copy" class="w-3.5 h-3.5 text-cyan-400"></i>
-            <span id="copy-btn-label">Copy Prompt</span>
+          <textarea id="bolt-prompt-text" readonly rows="12" class="w-full bg-slate-50 border border-slate-300 rounded p-3 font-mono text-[11px] text-slate-800 focus:outline-none select-all leading-relaxed"></textarea>
+          <button id="copy-bolt-prompt-btn" class="absolute top-2 right-2 bg-[#0A2540] hover:bg-[#16436E] text-white px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1.5 shadow transition">
+            <i data-lucide="copy" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span id="copy-btn-label">Copy Official SITREP</span>
           </button>
         </div>
       </div>
 
       <!-- Modal Footer -->
-      <div class="px-5 py-3 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
-        <span class="text-[11px] text-slate-500">Zero-install local file • Instant cloud-ready migration</span>
-        <div class="flex items-center gap-2">
-          <a href="https://bolt.new" target="_blank" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs flex items-center gap-1.5 transition">
-            <span>Open Bolt.new</span>
-            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-          </a>
-        </div>
+      <div class="px-5 py-3 border-t border-slate-300 bg-slate-100 flex items-center justify-between">
+        <span class="text-[11px] text-slate-600 font-medium">Authorized by MoES / TNSDMA / GCC State EOC</span>
+        <button onclick="window.print()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-400 font-semibold px-3 py-1.5 rounded text-xs flex items-center gap-1.5 transition">
+          <i data-lucide="printer" class="w-3.5 h-3.5 text-slate-600"></i>
+          <span>Print / Save PDF</span>
+        </button>
       </div>
     </div>
   </div>
@@ -746,9 +850,9 @@
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // High-contrast tactical base tiles (CartoDB Dark Matter)
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors',
+    // Official Cartographic Base Tiles (CARTO Voyager - Clean Government Civic GIS)
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap contributors | MoES NCMRWF GCC',
       subdomains: 'abcd',
       maxZoom: 19
     }).addTo(map);
@@ -759,12 +863,12 @@
     const substationLayerGroup = L.layerGroup().addTo(map);
     const routeLayerGroup = L.layerGroup().addTo(map);
 
-    // NDMA Depth Color Helper (R2)
+    // Official NDMA 4-Tier Inundation Scale Colors (Standard Institutional Cartography)
     function getDepthColor(depthCm) {
-      if (depthCm < 10) return '#10b981'; // Safe green
-      if (depthCm <= 25) return '#f59e0b'; // Caution amber
-      if (depthCm <= 50) return '#f97316'; // Severe orange
-      return '#ef4444'; // Critical red
+      if (depthCm < 10) return '#15803d'; // Forest Green (Passable)
+      if (depthCm <= 25) return '#d97706'; // Deep Amber (Caution)
+      if (depthCm <= 50) return '#ea580c'; // Vibrant Orange (Severe)
+      return '#dc2626'; // Crimson Red (Critical)
     }
 
     // High-Performance Cached Polyline Update Engine (R3, Acceptance Criteria)
@@ -777,7 +881,7 @@
 
       window.CHENNAI_FLOOD_DATA.segments.forEach(seg => {
         const polyline = L.polyline(seg.coords, {
-          color: '#10b981',
+          color: '#15803d',
           weight: 2.5,
           opacity: 0.85,
           lineCap: 'round'
@@ -894,17 +998,17 @@
         });
 
         marker.bindPopup(`
-          <div class="font-sans text-xs p-1 space-y-1">
-            <div class="font-bold text-red-400 flex items-center gap-1.5">
+          <div class="font-sans text-xs p-1 space-y-1 text-slate-800">
+            <div class="font-bold text-red-700 flex items-center gap-1.5 border-b border-slate-200 pb-1">
               <span>⚠️</span>
               <span>Surcharging Manhole (${mh.id})</span>
             </div>
-            <div class="text-slate-200 font-medium">${mh.name || mh.location}</div>
-            <div class="text-[11px] text-slate-300">Zone: <b>${mh.zone}</b></div>
-            <div class="text-[11px]">Ground: <b>${elev.toFixed(2)}m</b> | HGL: <b class="text-red-400">${effectiveHgl.toFixed(2)}m</b></div>
-            <div class="text-[11px]">Surcharge Head: <b class="text-amber-400">+${deltaH.toFixed(2)}m</b></div>
-            <div class="text-[11px]">Backflow Overflow: <b class="text-red-400">${backflow} m³/s</b></div>
-            <div class="mt-1 pt-1 border-t border-slate-700 text-[10px] text-cyan-400">
+            <div class="text-slate-900 font-semibold">${mh.name || mh.location}</div>
+            <div class="text-[11px] text-slate-600">Zone: <b class="text-slate-900">${mh.zone}</b></div>
+            <div class="text-[11px]">Ground: <b>${elev.toFixed(2)}m</b> | HGL: <b class="text-red-700">${effectiveHgl.toFixed(2)}m</b></div>
+            <div class="text-[11px]">Surcharge Head: <b class="text-amber-700">+${deltaH.toFixed(2)}m</b></div>
+            <div class="text-[11px]">Backflow Overflow: <b class="text-red-700">${backflow} m³/s</b></div>
+            <div class="mt-1 pt-1 border-t border-slate-200 text-[10px] text-blue-700 font-semibold">
               👉 Click marker to open Asset Diagnostic Inspector
             </div>
           </div>
@@ -941,20 +1045,20 @@
 
         if (isPlinthBreached || isThreat) plinthRiskCount++;
 
-        let badgeColor = '#3b82f6'; // Safe Blue
+        let badgeColor = '#1e3a8a'; // Safe Navy
         let statusLabel = 'Safe Clearance';
-        let statusClass = 'text-emerald-400';
+        let statusClass = 'text-emerald-700';
         let markerAnimClass = '';
 
         if (isPlinthBreached) {
-          badgeColor = '#ef4444'; // Red Critical
+          badgeColor = '#dc2626'; // Red Critical
           statusLabel = 'PLINTH BREACH (De-energize)';
-          statusClass = 'text-red-400 font-bold';
+          statusClass = 'text-red-700 font-bold';
           markerAnimClass = 'substation-critical';
         } else if (isThreat) {
-          badgeColor = '#a855f7'; // Purple High Risk
+          badgeColor = '#d97706'; // Amber Warning
           statusLabel = 'High Threat (Near Plinth)';
-          statusClass = 'text-purple-400 font-bold';
+          statusClass = 'text-amber-700 font-bold';
         }
 
         const customIcon = L.divIcon({
@@ -962,7 +1066,7 @@
           iconSize: [24, 24],
           iconAnchor: [12, 12],
           html: `
-            <div class="${markerAnimClass}" style="background:${badgeColor};width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;border:1.5px solid white;box-shadow:0 0 10px ${badgeColor};cursor:pointer;">
+            <div class="${markerAnimClass}" style="background:${badgeColor};width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;border:1.5px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);cursor:pointer;">
               <span style="font-size:12px;color:white;font-weight:bold;">⚡</span>
             </div>
           `
@@ -970,15 +1074,15 @@
 
         const marker = L.marker([sub.lat, sub.lon || sub.lng], { icon: customIcon });
         marker.bindPopup(`
-          <div class="font-sans text-xs p-1 space-y-1">
-            <div class="font-bold text-purple-400 flex items-center justify-between">
+          <div class="font-sans text-xs p-1 space-y-1 text-slate-800">
+            <div class="font-bold text-[#0A2540] flex items-center justify-between border-b border-slate-200 pb-1">
               <span>⚡ ${sub.name}</span>
-              <span class="text-[10px] font-mono text-slate-400">${sub.voltage || '110kV'}</span>
+              <span class="text-[10px] font-mono text-slate-500 bg-slate-100 px-1 py-0.5 rounded border border-slate-200">${sub.voltage || '110kV'}</span>
             </div>
             <div class="text-[11px]">Plinth Clearance Height: <b>${plinthCm} cm</b></div>
             <div class="text-[11px]">Local Flood Water Depth: <b class="${statusClass}">${currentLocalDepth.toFixed(1)} cm</b></div>
             <div class="text-[11px]">Operational Status: <b class="${statusClass}">${statusLabel}</b></div>
-            <div class="text-[10px] text-slate-400">Criticality: ${sub.criticality || 'Tier-2 Urban'}</div>
+            <div class="text-[10px] text-slate-500">Criticality: ${sub.criticality || 'Tier-2 Urban'}</div>
           </div>
         `);
 
@@ -1084,39 +1188,39 @@
     function renderRoutePolylines(scenario, directDepth, safeDepth) {
       routeLayerGroup.clearLayers();
 
-      // Direct Flooded Route (Red dashed)
+      // Direct Flooded Route (Crimson dashed)
       const directPolyline = L.polyline(scenario.direct, {
-        color: '#ef4444',
-        weight: 5,
+        color: '#dc2626',
+        weight: 4.5,
         opacity: 0.9,
-        dashArray: '8, 8'
+        dashArray: '7, 7'
       }).bindTooltip(`<b>Direct Route:</b> IMPASSABLE (${directDepth.toFixed(1)} cm flood bottleneck)`, { sticky: true });
 
-      // Safe Calculated Bypass Route (Glowing Green)
+      // Official Safe Calculated Bypass Route (Forest Green Solid)
       const safePolyline = L.polyline(scenario.safe, {
-        color: '#10b981',
-        weight: 6,
+        color: '#15803d',
+        weight: 5.5,
         opacity: 0.95
-      }).bindTooltip(`<b>Kairos A* Safe Bypass:</b> 100% CLEAR (${safeDepth.toFixed(1)} cm max depth)`, { sticky: true });
+      }).bindTooltip(`<b>108 Safe Evacuation Corridor:</b> 100% CLEAR (${safeDepth.toFixed(1)} cm max depth)`, { sticky: true });
 
-      // Origin & Destination Custom Pins
+      // Origin & Destination Civic Station Pins
       const startCoord = scenario.direct[0];
       const endCoord = scenario.direct[scenario.direct.length - 1];
 
       const startIcon = L.divIcon({
         iconSize: [26, 26],
         iconAnchor: [13, 13],
-        html: `<div style="background:#06b6d4;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2.5px solid white;font-weight:bold;font-size:11px;color:black;box-shadow:0 0 10px #06b6d4;">A</div>`
+        html: `<div style="background:#0A2540;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;font-weight:bold;font-size:11px;color:white;box-shadow:0 2px 6px rgba(0,0,0,0.35);">A</div>`
       });
 
       const endIcon = L.divIcon({
         iconSize: [26, 26],
         iconAnchor: [13, 13],
-        html: `<div style="background:#10b981;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2.5px solid white;font-weight:bold;font-size:11px;color:black;box-shadow:0 0 10px #10b981;">B</div>`
+        html: `<div style="background:#15803d;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid white;font-weight:bold;font-size:11px;color:white;box-shadow:0 2px 6px rgba(0,0,0,0.35);">B</div>`
       });
 
-      const startMarker = L.marker(startCoord, { icon: startIcon }).bindPopup(`<b>Origin:</b> ${scenario.origin}`);
-      const endMarker = L.marker(endCoord, { icon: endIcon }).bindPopup(`<b>Destination:</b> ${scenario.destination}`);
+      const startMarker = L.marker(startCoord, { icon: startIcon }).bindPopup(`<b>Incident Origin:</b> ${scenario.origin}`);
+      const endMarker = L.marker(endCoord, { icon: endIcon }).bindPopup(`<b>Hospital Destination:</b> ${scenario.destination}`);
 
       routeLayerGroup.addLayer(directPolyline);
       routeLayerGroup.addLayer(safePolyline);
@@ -1258,7 +1362,7 @@
       }).join('');
     }
 
-    // Tab Switcher
+    // Tab Switcher (Official Government Tab Styling)
     function switchTab(tabId) {
       state.activeTab = tabId;
       const tabs = ['routing', 'inspector', 'clogging'];
@@ -1266,10 +1370,10 @@
         const btn = document.getElementById(`tab-${t}-btn`);
         const content = document.getElementById(`tab-${t}`);
         if (t === tabId) {
-          btn.className = 'flex-1 py-2 rounded text-center transition flex items-center justify-center gap-1.5 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 font-semibold';
+          btn.className = 'flex-1 py-1.5 rounded text-center transition flex items-center justify-center gap-1.5 bg-[#0A2540] text-white shadow-xs font-semibold';
           content.classList.remove('hidden');
         } else {
-          btn.className = 'flex-1 py-2 rounded text-center transition flex items-center justify-center gap-1.5 text-slate-400 hover:text-slate-200';
+          btn.className = 'flex-1 py-1.5 rounded text-center transition flex items-center justify-center gap-1.5 text-slate-700 hover:bg-white/80 font-medium';
           content.classList.add('hidden');
         }
       });
@@ -1292,9 +1396,9 @@
       // Highlight active tick
       document.querySelectorAll('.step-tick').forEach((el, idx) => {
         if (idx === state.currentTimeStep) {
-          el.className = 'hover:text-cyan-400 cursor-pointer step-tick text-cyan-400 font-bold';
+          el.className = 'hover:text-amber-300 cursor-pointer step-tick text-amber-400 font-bold';
         } else {
-          el.className = 'hover:text-cyan-400 cursor-pointer step-tick text-slate-400';
+          el.className = 'hover:text-amber-300 cursor-pointer step-tick text-slate-300';
         }
       });
 
@@ -1325,8 +1429,8 @@
       state.isPlaying = !state.isPlaying;
       if (state.isPlaying) {
         playIcon.setAttribute('data-lucide', 'pause');
-        playPauseBtn.classList.replace('bg-cyan-600', 'bg-amber-600');
-        playPauseBtn.classList.replace('shadow-cyan-600/30', 'shadow-amber-600/30');
+        playPauseBtn.classList.replace('bg-[#138808]', 'bg-amber-600');
+        playPauseBtn.classList.replace('hover:bg-emerald-600', 'hover:bg-amber-500');
         lucide.createIcons();
         state.playbackTimer = setInterval(() => {
           let next = (state.currentTimeStep + 1) % 6;
@@ -1335,8 +1439,8 @@
       } else {
         clearInterval(state.playbackTimer);
         playIcon.setAttribute('data-lucide', 'play');
-        playPauseBtn.classList.replace('bg-amber-600', 'bg-cyan-600');
-        playPauseBtn.classList.replace('shadow-amber-600/30', 'shadow-cyan-600/30');
+        playPauseBtn.classList.replace('bg-amber-600', 'bg-[#138808]');
+        playPauseBtn.classList.replace('hover:bg-amber-500', 'hover:bg-emerald-600');
         lucide.createIcons();
       }
     }
@@ -1412,52 +1516,70 @@
       map.flyTo([13.0100, 80.2200], 13, { duration: 1.2 });
     });
 
-    // Bolt.new 1-Click Cloud Export Modal & Prompt (R6)
+    // Official MoES / GCC Situation Report (SITREP) Generator
     const boltModal = document.getElementById('bolt-export-modal');
     const boltPromptText = document.getElementById('bolt-prompt-text');
     const copyBtn = document.getElementById('copy-bolt-prompt-btn');
     const copyBtnLabel = document.getElementById('copy-btn-label');
 
-    const boltExportPrompt = `# Bolt.new Project Specification: Urban Flood Nowcasting System Web GIS Command Twin (SIH 2026 PS 26085)
+    function generateOfficialSitrep() {
+      const stepIdx = state.currentTimeStep;
+      const tLabel = timeLabels[stepIdx];
+      const tClock = timeClocks[stepIdx];
+      const inunEl = document.getElementById('kpi-inundated') ? document.getElementById('kpi-inundated').innerText : '38 Segments';
+      const mhEl = document.getElementById('kpi-manholes') ? document.getElementById('kpi-manholes').innerText : '19 Nodes';
+      const subEl = document.getElementById('kpi-substations') ? document.getElementById('kpi-substations').innerText : '7 at Plinth Risk';
+      const rainEl = document.getElementById('kpi-rainfall') ? document.getElementById('kpi-rainfall').innerText : '84.2 mm/hr';
+      const depthEl = document.getElementById('kpi-max-depth') ? document.getElementById('kpi-max-depth').innerText : '54.6 cm';
+      const clogPct = document.getElementById('clogging-pct-badge') ? document.getElementById('clogging-pct-badge').innerText : '35% Silt Deficit';
+      const veh = VEHICLE_CONFIG[state.selectedVehicle] || VEHICLE_CONFIG.ambulance;
+      const directDepth = document.getElementById('route-direct-depth') ? document.getElementById('route-direct-depth').innerText : '52.4 cm';
+      const safeDepth = document.getElementById('route-safe-depth') ? document.getElementById('route-safe-depth').innerText : '8.5 cm';
 
-Create a high-performance, full-viewport Web GIS Command Twin application for the Ministry of Earth Sciences (MoES) / NCMRWF pilot in Greater Chennai Corporation (GCC).
+      return `================================================================================
+GOVERNMENT OF INDIA | MINISTRY OF EARTH SCIENCES (MoES)
+NATIONAL CENTRE FOR MEDIUM RANGE WEATHER FORECASTING (NCMRWF)
+GREATER CHENNAI CORPORATION (GCC) - INTEGRATED COMMAND & CONTROL CENTRE (ICCC)
+FLOOD NOWCAST SITUATION REPORT (SITREP) & DISASTER ADVISORY BULLETIN
+================================================================================
+BULLETIN ID    : SITREP-CMA-2026-09/FL-0${stepIdx + 1}
+EVENT MONITORED: Severe Convective Precipitation / Cyclone Simulation
+NOWCAST WINDOW : ${tLabel} ${tClock} (10-Min Dual-Pol Doppler Radar)
+NDMA ALERT TIER: RED (Priority Action Required)
+SECURITY CLASS : OFFICIAL CIVIC CIRCULATION (GCC / TNSDMA / 108 GVK-EMRI)
+--------------------------------------------------------------------------------
 
-## Tech Stack
-- React 19 + TypeScript + Vite + Tailwind CSS v4
-- Leaflet + React-Leaflet for dark tactical Web GIS mapping
-- Lucide React icons
-- Canvas/SVG for real-time 60 FPS hydraulic animations
+1. EXECUTIVE HYDROLOGICAL SUMMARY:
+   * Peak Precipitation Intensity: ${rainEl}
+   * Inundated Drainage Reaches  : ${inunEl} (>10 cm threshold)
+   * Maximum Street Ponding Depth: ${depthEl} (CMA Lowland Depressions)
+   * Surcharging Manhole Hotspots: ${mhEl} (Hydrostatic Fountain Backflow)
+   * TANGEDCO Power Substations  : ${subEl} (Active Plinth Submersion Risk)
+   * SWD Pre-Monsoon Silt Deficit: ${clogPct} (Conduit Conveyance Factor)
 
-## Key Functional Modules
-1. Tactical Command Header: IMD Meenambakkam 10-min Doppler radar telemetry badge, storm scenario selector (Cyclone Michaung 95 mm/h, Monsoon 40 mm/h, Convective 20 mm/h), Center Chennai flyTo control.
-2. Executive KPI Metrics Strip: Inundated Roads count (>10cm), Surcharging Manhole nodes (HGL > Z_ground), Critical Substations at Plinth Risk, Peak Rainfall Rate, Max Street Depth, and A* Safe Evacuation corridor status.
-3. Interactive Geospatial Viewport:
-   - 521 authentic Chennai road vectors styled via CPHEEO/NDMA 4-tier thresholds (<10cm green, 10-25cm amber, 25-50cm orange, >50cm critical red).
-   - 25 chronic surcharging manhole hotspots with multi-stage concentric fountain backflow ripple animations.
-   - 20 authentic TANGEDCO 230kV/110kV substations with real-time plinth inundation risk alerts.
-   - Dual evacuation routing polylines (Direct submerged red dashed vs Kairos A* glowing green safe corridor).
-4. 0–180 Minute Nowcast Time Slider:
-   - Discrete 6-step time slider (T+0, T+30, T+60, T+90 peak, T+120, T+180) with 2.0s auto-advance playback loop.
-   - Dynamic SVG hyetograph mini-sparkline showing precipitation intensity progression across timesteps.
-   - High-performance cached geometry updates on slider scrub maintaining 60 FPS without DOM re-allocation.
-5. First Responder A* Evacuation Routing Simulator:
-   - 4 vehicle clearance limit profiles (108 Ambulance: 30cm, NDRF Truck: 45cm, Sedan: 18cm, 2-Wheeler: 10cm).
-   - 2 emergency corridors: Velachery -> Guindy Trauma Hospital and Kilpauk KMC -> Chennai Central.
-   - Real-time clearance breach alerts and turn-by-turn navigation guidance cues.
-6. Saint-Venant & Manning Surcharge Diagnostic Inspector:
-   - Interactive diagnostic card for clicked roads and surcharging manholes.
-   - Formula implementation:
-     * Manning Theoretical Capacity: Q₀ = (1/n) * A * R^(2/3) * S^(1/2) with n = 0.015
-     * Effective Drainage Capacity: Q_eff = Q₀ * (1 - μ_clog)
-     * Surcharge Pressure Head: Δh = max(0, HGL - Z_ground)
-     * Reverse Orifice Backflow: Q_backflow = C_d * A_manhole * sqrt(2 * g * Δh) with C_d = 0.62, g = 9.81 m/s²
-   - Dynamic Solid Waste Clogging Slider (0% to 80% μ_clog) live-syncing the diagnostic sheet.
+2. FIRST RESPONDER & 108 AMBULANCE ROUTING DIRECTIVE:
+   * Priority Vehicle Profile   : ${veh.name} (Clearance Limit: ${veh.clearance} cm)
+   * Standard Direct Corridor   : BLOCKED / IMPASSABLE
+     - Water Accumulation       : ${directDepth} (Clearance breached; engine hydrolock danger)
+   * Recommended A* Bypass      : OPERATIONAL (Via Elevated Ridge Corridor)
+     - Max Corridor Water Depth : ${safeDepth} (Guaranteed positive clearance safety margin)
 
-Use modular, modern React component architecture with clean separation between GIS layers, state stores, and telemetry controls.`;
+3. IMMEDIATE MITIGATION & RESCUE DIRECTIVES:
+   [1] GCC Stormwater Drainage Dept: Deploy high-capacity dewatering pump sets (100 HP)
+       to 25 surcharging manhole clusters (Velachery 100ft Rd, Madipakkam, Vyasarpadi).
+   [2] TANGEDCO Emergency Grid: De-energize high-threat feeder breakers if flood depth
+       exceeds 75% plinth clearance to prevent grid-wide short circuits.
+   [3] Traffic & Police Command: Barricade submerged underpasses and divert all civilian
+       traffic along designated A* resilient corridors.
 
-    boltPromptText.value = boltExportPrompt;
+================================================================================
+Issued by: Duty Hydrologist & Incident Commander, GCC ICCC Rippon Building
+In Collaboration with: NCMRWF / MoES Smart India Hackathon 2026 Pilot (PS #26085)
+================================================================================`;
+    }
 
     document.getElementById('export-bolt-btn').addEventListener('click', () => {
+      boltPromptText.value = generateOfficialSitrep();
       boltModal.classList.remove('hidden');
     });
 
@@ -1471,14 +1593,43 @@ Use modular, modern React component architecture with clean separation between G
 
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(boltPromptText.value).then(() => {
-        copyBtnLabel.innerText = 'Copied to Clipboard!';
-        copyBtn.classList.replace('bg-slate-800', 'bg-emerald-700');
+        copyBtnLabel.innerText = 'Copied Official SITREP!';
+        copyBtn.classList.replace('bg-[#0A2540]', 'bg-emerald-700');
         setTimeout(() => {
-          copyBtnLabel.innerText = 'Copy Prompt';
-          copyBtn.classList.replace('bg-emerald-700', 'bg-slate-800');
+          copyBtnLabel.innerText = 'Copy Official SITREP';
+          copyBtn.classList.replace('bg-emerald-700', 'bg-[#0A2540]');
         }, 2500);
       });
     });
+
+    // GIGW Accessibility Font Resizing Handlers
+    let currentFontSize = 16;
+    const fontDecreaseBtn = document.getElementById('font-decrease');
+    const fontResetBtn = document.getElementById('font-reset');
+    const fontIncreaseBtn = document.getElementById('font-increase');
+
+    if (fontDecreaseBtn) {
+      fontDecreaseBtn.addEventListener('click', () => {
+        if (currentFontSize > 13) {
+          currentFontSize -= 1;
+          document.documentElement.style.fontSize = currentFontSize + 'px';
+        }
+      });
+    }
+    if (fontResetBtn) {
+      fontResetBtn.addEventListener('click', () => {
+        currentFontSize = 16;
+        document.documentElement.style.fontSize = '16px';
+      });
+    }
+    if (fontIncreaseBtn) {
+      fontIncreaseBtn.addEventListener('click', () => {
+        if (currentFontSize < 20) {
+          currentFontSize += 1;
+          document.documentElement.style.fontSize = currentFontSize + 'px';
+        }
+      });
+    }
 
     // Mobile Drawer & Legend Handlers
     const intelDock = document.getElementById('intelligence-dock');

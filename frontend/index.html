@@ -183,6 +183,13 @@
 
     <!-- Right Actions & Controls -->
     <div class="flex items-center gap-2 sm:gap-3">
+      <!-- Layer 0 Hydrodynamic Engine Badge -->
+      <div id="layer0-badge" class="hidden md:flex items-center gap-1.5 bg-[#0F3254] border border-blue-400/30 rounded px-2.5 py-1 text-xs text-slate-200 shadow-sm" title="Coupled Manning-Saint-Venant Hydrodynamic Nowcasting Engine">
+        <span id="layer0-status-dot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+        <span class="text-[10px] text-slate-300 font-semibold uppercase">Engine:</span>
+        <span id="layer0-status-text" class="text-amber-300 font-mono font-bold text-[11px]">Checking...</span>
+      </div>
+
       <!-- IMD Telemetry Badge -->
       <div class="hidden xl:flex items-center gap-2 bg-[#0F3254] border border-blue-400/30 rounded px-2.5 py-1 text-xs text-slate-200 shadow-sm">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -1465,6 +1472,7 @@
       renderSubstations();
       updateVehicleAndRouteUI();
       refreshActiveAssetDiagnostic(); // Live-update active asset in Diagnostic Card (R5)
+      triggerLiveNowcast();
     });
 
     document.getElementById('reset-clog-btn').addEventListener('click', () => {
@@ -1479,6 +1487,7 @@
       else if (mode === 'monsoon') state.stormMultiplier = 0.55;
       else state.stormMultiplier = 0.30;
       setTimeStep(state.currentTimeStep);
+      triggerLiveNowcast();
     });
 
     // Vehicle Clearance Selector Listener (R4)
@@ -1683,11 +1692,80 @@ In Collaboration with: NCMRWF / MoES Smart India Hackathon 2026 Pilot (PS #26085
       }
     };
 
+    // =========================================================================
+    // LAYER 0 REST API BRIDGE (Coupled Hydrodynamic Simulation Bridge)
+    // =========================================================================
+    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? `${window.location.protocol}//${window.location.hostname}:8000`
+      : 'http://127.0.0.1:8000';
+
+    let isLayer0Connected = false;
+    let nowcastDebounceTimer = null;
+
+    async function checkLayer0Connection() {
+      const dot = document.getElementById('layer0-status-dot');
+      const text = document.getElementById('layer0-status-text');
+      if (!dot || !text) return;
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 1500);
+        const res = await fetch(`${API_BASE}/api/health`, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const data = await res.json();
+          isLayer0Connected = true;
+          dot.className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
+          text.className = 'text-[11px] font-mono text-emerald-300 font-bold';
+          text.innerText = 'Layer 0: Live (Coupled)';
+          console.log('[KAIROS] Layer 0 hydrodynamic pipeline connected:', data);
+          triggerLiveNowcast();
+        } else {
+          throw new Error('Non-200');
+        }
+      } catch (err) {
+        isLayer0Connected = false;
+        dot.className = 'w-2 h-2 rounded-full bg-blue-400';
+        text.className = 'text-[11px] font-mono text-blue-200 font-semibold';
+        text.innerText = 'Edge Mode (Embedded)';
+      }
+    }
+
+    function triggerLiveNowcast() {
+      if (!isLayer0Connected) return;
+      if (nowcastDebounceTimer) clearTimeout(nowcastDebounceTimer);
+      nowcastDebounceTimer = setTimeout(async () => {
+        const scenario = document.getElementById('scenario-select') ? document.getElementById('scenario-select').value : 'michaung';
+        const clogVal = document.getElementById('clog-slider') ? (parseInt(document.getElementById('clog-slider').value) / 100.0) : 0.35;
+        try {
+          const res = await fetch(`${API_BASE}/api/nowcast?scenario=${encodeURIComponent(scenario)}&clogging=${clogVal}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data && data.segments && window.CHENNAI_FLOOD_DATA && window.CHENNAI_FLOOD_DATA.segments) {
+            window.CHENNAI_FLOOD_DATA.segments.forEach(seg => {
+              if (data.segments[seg.id]) {
+                seg.depths = Object.assign(seg.depths || {}, data.segments[seg.id]);
+              }
+            });
+            updateRoadSegmentStyles();
+            if (data.kpis && data.kpis.inundated_segments) {
+              const kpiInundated = document.getElementById('kpi-inundated');
+              if (kpiInundated) kpiInundated.innerText = data.kpis.inundated_segments;
+            }
+          }
+        } catch (e) {
+          console.warn('[KAIROS] Nowcast fetch error:', e);
+        }
+      }, 250);
+    }
+
     // Initial Application Bootstrap
     initRoadSegments();
     setTimeStep(2); // T+60m default initial view
     renderSubstations();
     updateVehicleAndRouteUI();
+    checkLayer0Connection();
 
     // Default select initial asset for inspector
     if (window.CHENNAI_FLOOD_DATA && window.CHENNAI_FLOOD_DATA.segments && window.CHENNAI_FLOOD_DATA.segments.length > 0) {

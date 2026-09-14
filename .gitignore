@@ -1,4 +1,4 @@
-﻿# Byte-compiled / optimized / DLL files
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
@@ -42,3 +42,6 @@ Google_Drive_Datasets/
 # Environment secrets
 .env
 .env.local
+
+# Agent scratch logs
+.agents/

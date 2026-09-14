@@ -18,9 +18,12 @@ env/
 .DS_Store
 Thumbs.db
 
-# Heavy Datasets & Satellite Rasters (Stored in Google Drive / Local Vault)
+# Heavy Datasets & Google Drive Data Vault
 Datasets/
 Google_Drive_Datasets/
+google_drive_datasets/
+
+# Large Binary Archives (Stored in Google Drive)
 *.zip
 *.tar.gz
 *.rar
@@ -38,6 +41,29 @@ Google_Drive_Datasets/
 *.pdf
 *.docx
 *.xlsx
+
+# Heavy Remote Sensing, DEM & Climate Rasters (Stored in Google Drive)
+*.tif
+*.tiff
+*.hgt
+*.nc
+*.nc4
+
+# Heavy Soil Rasters & Raw High-Resolution Imagery (>25MB)
+Datasets/**/soil/*.png
+Datasets/**/soil/*.png.png
+Datasets/**/soil/*.jpg
+Datasets/**/soil/*.jpeg
+
+# Heavy Raw OpenStreetMap Polygons (>50MB, Stored in Google Drive)
+Datasets/**/oms_network/*building*.geojson
+Datasets/**/oms_network/Road*.geojson
+
+# Heavy Engineering Drawings / PDF Reports in raw datasets
+Datasets/**/*.pdf
+Datasets/**/*.PDF
+Datasets/**/*.mht
+Datasets/**/*.MHT
 
 # Environment secrets
 .env

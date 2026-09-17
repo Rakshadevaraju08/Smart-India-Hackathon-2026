@@ -134,9 +134,10 @@ This starts the backend API on port 8000 and opens the Web GIS Command Twin in y
 ---
 
 ## ?? Team Kairos — SIH 2026
-- **Gagan K S** (Lead Contributor)
-- **Yashwanth N**
+- **Yashwanth N** (Team Lead)
+- **Gagan K S**
 - **Rithesh**
 - **Vijay**
 - **Raksha**
 - **Vaishnavi**
+

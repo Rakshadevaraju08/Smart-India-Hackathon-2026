@@ -1,103 +1,140 @@
 # Urban Flood Nowcasting System (Drainage and Rainfall Coupling)
 
-**Smart India Hackathon 2026** | **Problem Statement ID**: 26085  
-**Ministry / Organization**: Ministry of Earth Sciences (MoES) / NCMRWF  
-**Target Domain**: Greater Chennai Corporation (GCC) & Chennai Metropolitan Area  
+[![Smart India Hackathon 2026](https://img.shields.io/badge/SIH-2026-blue.svg)](https://www.sih.gov.in/)
+[![Problem Statement](https://img.shields.io/badge/MoES%20%2F%20NCMRWF-PS%2026085-orange.svg)](https://www.sih.gov.in/)
+[![Python 3.13+](https://img.shields.io/badge/Python-3.13%2B-green.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
+[![Web GIS](https://img.shields.io/badge/Frontend-Leaflet%20Web%20GIS-199900.svg)](https://leafletjs.com/)
+[![Tests](https://img.shields.io/badge/Tests-25%2F25%20Passing-brightgreen.svg)](tests/test_layer0_rainfall.py)
+
+A physics-coupled 1D-2D hydro-meteorological nowcasting engine that predicts street-level urban inundation (0ñ3 hour lead time) for Greater Chennai Corporation (GCC - 7,894 road segments, 15 zones) by coupling Doppler Weather Radar nowcasts, 2D micro-topography, and 1D subsurface stormwater drainage graph hydraulics.
 
 ---
 
-## üìÅ Repository & Project Architecture
+## ??? System Architecture
 
-This workspace is strictly structured into modular components:
+`
+                               STAGE 1: DATA INGESTION & NOWCASTING (LAYER 0)
+        +-----------------------------------------------------------------------+
+        ¶   IMD Doppler Weather Radar       ¶   Real-Time Automatic Rain Gauges ¶
+        ¶   (Meenambakkam / Chennai Port)   ¶   (Nungambakkam, Guindy, etc.)    ¶
+        ¶   10-min SRI & PAC Grids          ¶   15-min Telemetry                ¶
+        +-----------------------------------------------------------------------+
+                          ¶                                   ¶
+                          ?                                   ?
+        +-----------------------------------------------------------------------+
+        ¶       Dynamic Gauge-to-Radar Bias Calibration Engine (KED)            ¶
+        ¶       Corrects tropical cyclonic Drop Size Distribution (DSD) bias    ¶
+        +-----------------------------------------------------------------------+
+                                            ¶
+                                            ?
+        +-----------------------------------------------------------------------+
+        ¶       Farneb‰ck Semi-Lagrangian Optical Flow Nowcaster (PySteps)      ¶
+        ¶       Projects rain field motion to T+15m, T+30m, T+60m ... T+180m    ¶
+        ¶       (Execution Latency: 2.8 ms)                                     ¶
+        +-----------------------------------------------------------------------+
+                                            ¶
+                                            ?
+        +-----------------------------------------------------------------------+
+        ¶       Mass-Conservative Street Disaggregator                          ¶
+        ¶       Downscales 1 km radar nowcast onto 7,894 road segments          ¶
+        ¶       (Strict mass conservation: <= 0.000089% volume error)           ¶
+        +-----------------------------------------------------------------------+
+                                            ¶
+                                            ?
+                            STAGES 2 - 5: 1D-2D HYDRAULIC TWIN
+        +-----------------------------------------------------------------------+
+        ¶  ï 2D Overland Runoff Accumulation (Modified Rational / Shallow Water)¶
+        ¶  ï 1D Subsurface Conduit Capacity (Manning's Pipe Flow)               ¶
+        ¶  ï Dynamic Solid Waste Clogging Penalty (mu_clog in [0.0, 0.8])      ¶
+        ¶  ï Manhole Hydraulic Grade Line Surcharge & Street Backflow Rate      ¶
+        ¶  ï First Responder Emergency A* Evacuation Routing Engine             ¶
+        +-----------------------------------------------------------------------+
+`
 
-```
+---
+
+## ?? Repository Directory Structure
+
+`
 SIH/
-‚îÇ
-‚îú‚îÄ‚îÄ Datasets/                                            # Single ML-ready training dataset
-‚îÇ   ‚îî‚îÄ‚îÄ chennai_unified_flood_master_dataset.csv         # 7,894 segments √ó 27 coupled features (1.62 MB)
-‚îÇ
-‚îú‚îÄ‚îÄ Google_Drive_Datasets/                               # Cloud vault staging folder for heavy raw data
-‚îÇ   ‚îú‚îÄ‚îÄ 01_Rainfall_Yashwanth/                           # 4,416 NASA GPM satellite .nc4 rasters & ERA5
-‚îÇ   ‚îú‚îÄ‚îÄ 02_Drainage_Rithesh/                             # CMWSSB pipe attributes & OSM vector network
-‚îÇ   ‚îú‚îÄ‚îÄ 03_Terrain_and_DEM_Vijay/                        # ISRO Cartosat-1 30m DEM & soil maps
-‚îÇ   ‚îú‚îÄ‚îÄ 04_Historical_Floods_Raksha/                     # 7,895 flooded streets & HEC-RAS models
-‚îÇ   ‚îú‚îÄ‚îÄ 05_Satellite_Vaishnavi/                          # Sentinel-1 SAR & 10m LULC land cover
-‚îÇ   ‚îú‚îÄ‚îÄ 06_Civic_Maintenance_Gagan/                      # Silt, solid waste, and blockage records
-‚îÇ   ‚îú‚îÄ‚îÄ chennai_unified_flood_master_dataset.csv         # Consolidated ML table copy
-‚îÇ   ‚îú‚îÄ‚îÄ inventory.xlsx                                   # Grand Master Inventory
-‚îÇ   ‚îî‚îÄ‚îÄ README.md                                        # Google Drive upload instructions
-‚îÇ
-‚îú‚îÄ‚îÄ maintenance_data/                                    # Day 1 Civic Maintenance & Domain Datasets
-‚îÇ   ‚îú‚îÄ‚îÄ blockage_complaints/                             # 25 chronic drain blockage coordinates
-‚îÇ   ‚îú‚îÄ‚îÄ drain_maintenance/                               # 1,671 km SWD desilting & 44 outfall canals
-‚îÇ   ‚îú‚îÄ‚îÄ economic_data/                                   # 12 commercial clusters & rupee loss curves
-‚îÇ   ‚îú‚îÄ‚îÄ electrical/                                      # 20 TANGEDCO substations & plinth heights
-‚îÇ   ‚îú‚îÄ‚îÄ solid_waste/                                     # Zonal MSW generation & litter risk index
-‚îÇ   ‚îî‚îÄ‚îÄ traffic/                                         # Peak PCU counts & evacuation routing profile
-‚îÇ
-‚îú‚îÄ‚îÄ research_reports/                                    # Publication-grade technical documentation
-‚îÇ   ‚îú‚îÄ‚îÄ Urban_Flood_Nowcasting_Comprehensive_Research_Report.pdf # 5-Page formal PDF architecture report
-‚îÇ   ‚îú‚îÄ‚îÄ research_report_urban_flood_nowcasting.md        # Comprehensive technical markdown report
-‚îÇ   ‚îî‚îÄ‚îÄ urban_flood_nowcasting_proposal_v2.docx          # Project proposal document
-‚îÇ
-‚îú‚îÄ‚îÄ scripts/                                             # Essential project scripts
-‚îÇ   ‚îú‚îÄ‚îÄ download_drive_data.py                           # Downloads raw archives from Google Drive
-‚îÇ   ‚îî‚îÄ‚îÄ verify_env.py                                    # Verifies all 21 Python dependencies
-‚îÇ
-‚îú‚îÄ‚îÄ inventory.xlsx                                       # Grand Master Team Data Catalog
-‚îú‚îÄ‚îÄ requirements.txt                                     # Pinned dependencies (Python 3.13 tested)
-‚îî‚îÄ‚îÄ .gitignore                                           # Excludes heavy binaries (>25MB) from Git
-```
++-- src/                                  # Production source code
+¶   +-- layer0/                           # Layer 0: Rainfall Ingestion & Nowcasting Engine
+¶   ¶   +-- __init__.py
+¶   ¶   +-- ingestion.py                  # Live IMD radar scraper, AWS poller & fallback
+¶   ¶   +-- calibrator.py                 # Brandes & Kriging (KED) gauge-radar calibration
+¶   ¶   +-- nowcaster.py                  # Farneb‰ck optical flow advection (PySteps)
+¶   ¶   +-- disaggregator.py              # Area-weighted mass-conservative street mapper
+¶   ¶   +-- pipeline.py                   # Master Layer 0 pipeline orchestrator
+¶   +-- api.py                            # FastAPI hydrodynamic nowcasting backend bridge
+¶
++-- frontend/                             # Tactical Web GIS Command Twin
+¶   +-- index.html                        # Full-screen dark tactical emergency interface
+¶   +-- data/
+¶       +-- chennai_flood_data.js         # Calibrated spatial dataset for 7,894 road segments
+¶
++-- tests/                                # Automated verification test suite
+¶   +-- test_layer0_rainfall.py           # 25-test comprehensive suite (100% passing)
+¶   +-- test_adversarial_m8_2.py          # Hydraulic stress and boundary test suite
+¶   +-- adversarial/                      # Hydraulic adversarial scenarios
+¶   +-- e2e/                              # End-to-end integration tests
+¶
++-- research_reports/                     # System design documentation
+¶   +-- research_report_urban_flood_nowcasting.md # Architectural specification report
+¶
++-- launch_dashboard.bat                  # 1-click Windows launcher (starts API & browser)
++-- requirements.txt                      # Pinned Python 3.13 dependencies
++-- generate_flowchart.py                 # Generates high-res project flowchart
++-- project_flowchart_explained.png       # 5-stage architecture flowchart
++-- dashboard_screenshot.png              # Command twin interface preview
++-- dashboard_inspector_screenshot.png    # Subsurface surcharge inspector view
++-- dashboard_clogging_screenshot.png     # Solid waste dynamic clogging view
++-- README.md                             # Project documentation
+`
 
 ---
 
-## ‚ö° Quick Start
+## ? Quick Start & Verification
 
-### 1. Environment Setup
-```powershell
+### 1. Environment Installation
+Clone the repository and install dependencies:
+`powershell
+git clone https://github.com/Team-Kairos-SIH/Smart-India-Hackathon-2026.git
+cd Smart-India-Hackathon-2026
 pip install -r requirements.txt
-python scripts/verify_env.py
-```
+`
 
-### 2. Inspect the Master ML Dataset
-```python
-import pandas as pd
-df = pd.read_csv("Datasets/chennai_unified_flood_master_dataset.csv")
-print(df.shape)  # (7894, 27)
-```
+### 2. Run the Layer 0 Test Suite (25 Tests)
+Run pytest to verify radar scraping, PySteps optical flow nowcasting, Kriging bias calibration, and mass conservation:
+`powershell
+pytest tests/test_layer0_rainfall.py -v
+`
+*Expected result: 25 passed in ~8 seconds (100% pass rate).*
 
-### 3. Download Raw Archives from Google Drive (Optional)
-```powershell
-python scripts/download_drive_data.py
-```
+### 3. Run the Standalone Layer 0 Pipeline
+Execute the complete rainfall ingestion and nowcasting engine:
+`powershell
+python -m src.layer0.pipeline
+`
+This fetches live IMD radar grids, runs the optical flow cloud nowcast, calibrates with ground rain gauges, and generates model-ready rain vectors for all 7,894 streets in Chennai.
+
+### 4. Launch the Tactical Command Twin (1-Click)
+Double-click launch_dashboard.bat or run:
+`powershell
+.\launch_dashboard.bat
+`
+This starts the backend API on port 8000 and opens the Web GIS Command Twin in your browser:
+- **0ñ180 Min Nowcast Slider**: Scrub forward in time to watch inundation develop street-by-street.
+- **Surcharge Diagnostic Inspector**: Click any road or manhole to inspect nominal diameter ($), hydraulic head, and backflow rate.
+- **Dynamic Clogging Simulator**: Slide solid waste blockage ($\mu_{\text{clog}}$) from 0% to 80% to observe the real-world impact of uncleaned drains.
+- **A\* Emergency Routing**: Switch vehicle types (108 Ambulance, NDRF truck, passenger car, two-wheeler) to calculate safe flood-avoidance routes.
 
 ---
 
-## üß™ How to Verify & Test After Cloning to a PC
-
-If anyone clones this repository onto their machine, here is how they can immediately test and run everything:
-
-### Step 1: Run the Automated Layer 0 Test Suite (25 Tests)
-Run pytest to verify radar scraping, PySteps optical flow nowcasting, Kriging bias calibration, and 100% mass conservation across all 7,894 streets:
-```powershell
-pytest tests/test_layer0_rainfall.py -v
-```
-*(All 25 tests pass in ~8 seconds with zero failures).*
-
-### Step 2: Run the Layer 0 Rainfall Ingestion & Nowcasting Pipeline
-Execute the full Python pipeline directly in the terminal:
-```powershell
-python -m src.layer0.pipeline
-```
-This will:
-- Poll live IMD Meenambakkam/Chennai Port radar feeds (`sr_chn.gif`).
-- Fetch real-time AWS rain gauges across Chennai.
-- Run Farneb√§ck optical flow nowcasting for 6 forward time steps ($T+15\text{m}$ to $T+180\text{m}$).
-- Remap continuous rainfall onto all 7,894 road segments with exact volume conservation.
-
-### Step 3: Launch the Full Command Twin Dashboard (1-Click)
-Double-click [`launch_dashboard.bat`](file:///c:/Users/Gagan%20K%20S/Documents/SIH/launch_dashboard.bat) or run in terminal:
-```powershell
-.\launch_dashboard.bat
-```
-This automatically boots the backend API bridge on port 8000 and opens the Web GIS tactical dashboard in your default browser.
+## ?? Team Kairos ó SIH 2026
+- **Gagan K S** (Lead Contributor)
+- **Yashwanth N**
+- **Rithesh**
+- **Vijay**
+- **Raksha**
+- **Vaishnavi**

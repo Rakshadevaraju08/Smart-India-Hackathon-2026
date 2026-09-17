@@ -1,7 +1,7 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
-*$py.class
+*.class
 *.so
 
 # Virtual Environments
@@ -18,12 +18,13 @@ env/
 .DS_Store
 Thumbs.db
 
-# Heavy Datasets & Google Drive Data Vault
+# Heavy Datasets & Raw Collected Data (Excluded from GitHub)
 Datasets/
 Google_Drive_Datasets/
 google_drive_datasets/
+maintenance_data/
 
-# Large Binary Archives (Stored in Google Drive)
+# Large Binary & Data Archives
 *.zip
 *.tar.gz
 *.rar
@@ -34,40 +35,37 @@ google_drive_datasets/
 *.tiff
 *.h5
 *.hdf5
+*.hgt
 
-# Heavy Presentation Binaries & Documents
+# Presentation Decks, Templates, and Document Artifacts (Excluded)
 *.pptx
 *.ppt
 *.pdf
 *.docx
 *.xlsx
 
-# Heavy Remote Sensing, DEM & Climate Rasters (Stored in Google Drive)
-*.tif
-*.tiff
-*.hgt
-*.nc
-*.nc4
+# Slide Render Raws, Presentation Images & Helper Scripts (Excluded)
+slide*.png
+page*.png
+Gagan*.pdf
+PPT*.pdf
+Urban*.pdf
+SIH*.pptx
+SIH*.pdf
+SIH*.svg
+SIH*.png
+scripts/assemble_final_presentation.py
+scripts/make_guide.py
+scripts/render_slide*.py
 
-# Heavy Soil Rasters & Raw High-Resolution Imagery (>25MB)
-Datasets/**/soil/*.png
-Datasets/**/soil/*.png.png
-Datasets/**/soil/*.jpg
-Datasets/**/soil/*.jpeg
-
-# Heavy Raw OpenStreetMap Polygons (>50MB, Stored in Google Drive)
-Datasets/**/oms_network/*building*.geojson
-Datasets/**/oms_network/Road*.geojson
-
-# Heavy Engineering Drawings / PDF Reports in raw datasets
-Datasets/**/*.pdf
-Datasets/**/*.PDF
-Datasets/**/*.mht
-Datasets/**/*.MHT
+# Temporary Scratch Logs & Agent Files
+.agents/
+ORIGINAL_REQUEST.md
+PROJECT.md
+TEST_INFRA.md
+TEST_READY.md
+SIH2026_Urban_Flood_Master_Guide.md
 
 # Environment secrets
 .env
 .env.local
-
-# Agent scratch logs
-.agents/

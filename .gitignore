@@ -44,19 +44,16 @@ maintenance_data/
 *.docx
 *.xlsx
 
-# Slide Render Raws, Presentation Images & Helper Scripts (Excluded)
-slide*.png
-page*.png
-Gagan*.pdf
-PPT*.pdf
-Urban*.pdf
-SIH*.pptx
-SIH*.pdf
-SIH*.svg
-SIH*.png
+# Loose PNGs, Screenshots, Flowcharts & Presentation Images (Excluded)
+*.png
+*.jpg
+*.jpeg
+*.svg
+generate_flowchart.py
 scripts/assemble_final_presentation.py
 scripts/make_guide.py
 scripts/render_slide*.py
+scripts/capture_all_views*.py
 
 # Temporary Scratch Logs & Agent Files
 .agents/

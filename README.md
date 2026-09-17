@@ -82,13 +82,15 @@ SIH/
 +-- research_reports/                     # System design documentation
 ¦   +-- research_report_urban_flood_nowcasting.md # Architectural specification report
 ¦
++-- scripts/                              # Utility scripts
+¦   +-- deploy_to_vercel.py               # Vercel deployment helper
+¦   +-- download_drive_data.py            # Drive dataset staging script
+¦   +-- prepare_frontend_data.py          # GeoJSON data builder
+¦   +-- verify_env.py                     # Environment package verifier
+¦
 +-- launch_dashboard.bat                  # 1-click Windows launcher (starts API & browser)
 +-- requirements.txt                      # Pinned Python 3.13 dependencies
-+-- generate_flowchart.py                 # Generates high-res project flowchart
-+-- project_flowchart_explained.png       # 5-stage architecture flowchart
-+-- dashboard_screenshot.png              # Command twin interface preview
-+-- dashboard_inspector_screenshot.png    # Subsurface surcharge inspector view
-+-- dashboard_clogging_screenshot.png     # Solid waste dynamic clogging view
++-- vercel.json                           # Vercel web routing configuration
 +-- README.md                             # Project documentation
 `
 

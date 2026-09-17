@@ -46,6 +46,7 @@ maintenance_data/
 
 # Loose PNGs, Screenshots, Flowcharts & Presentation Images (Excluded)
 *.png
+!frontend/data/*.png
 *.jpg
 *.jpeg
 *.svg

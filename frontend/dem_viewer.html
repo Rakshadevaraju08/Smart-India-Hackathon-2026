@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KAIROS | Layer 1 2D DEM Micro-Topography & Overland Runoff Explorer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden select-none font-sans">
+
+  <!-- Top Navigation Strip -->
+  <header class="bg-[#0B1E36] border-b border-[#1E3A5F] px-4 py-2.5 flex items-center justify-between shadow-lg shrink-0">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 px-2.5 py-1.5 rounded border border-slate-700 text-sky-400 font-medium transition">
+        <span>&larr;</span> Back to Command Twin
+      </a>
+      <div class="h-4 w-px bg-slate-700"></div>
+      <div>
+        <h1 class="text-sm font-bold text-sky-300 flex items-center gap-2">
+          <span>🗺️</span> KAIROS Layer 1: 2D Hydro-Conditioned DEM Terrain Map
+        </h1>
+        <p class="text-[11px] text-slate-400">Continuous 30m ISRO Cartosat-1 Elevation Grid + 825 Canal Burns + 353 Underpass Sags</p>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="flex items-center gap-3 text-xs">
+      <div class="bg-slate-900/90 px-3 py-1 rounded border border-slate-700 flex items-center gap-2">
+        <span class="text-slate-400">Elevation Range:</span>
+        <span class="font-bold text-emerald-400">4.11m - 65.83m MSL</span>
+      </div>
+      <div class="bg-slate-900/90 px-3 py-1 rounded border border-slate-700 flex items-center gap-2">
+        <span class="text-slate-400">Mean Slope:</span>
+        <span class="font-bold text-amber-400">0.0310 m/m (3.1%)</span>
+      </div>
+      <div class="bg-slate-900/90 px-3 py-1 rounded border border-slate-700 flex items-center gap-2">
+        <span class="text-slate-400">Calibrated Roads:</span>
+        <span class="font-bold text-sky-400">7,894 Segments</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Split Layout -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Map Canvas -->
+    <div id="map" class="flex-1 h-full z-10 relative">
+      <!-- Floating Map Layer Controls -->
+      <div class="absolute top-4 left-14 z-[500] bg-slate-900/90 backdrop-blur-md border border-slate-700 p-3 rounded-lg shadow-xl text-xs space-y-2.5 w-64">
+        <div class="font-bold text-slate-200 flex items-center justify-between border-b border-slate-800 pb-1.5">
+          <span>Terrain Map Layer</span>
+          <span class="text-[10px] text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-1.5 py-0.5 rounded">Continuous Raster</span>
+        </div>
+        
+        <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+          <input type="checkbox" id="toggle-dem" checked class="accent-sky-500 rounded">
+          <span>Show 2D DEM Elevation Grid</span>
+        </label>
+
+        <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+          <input type="checkbox" id="toggle-markers" checked class="accent-sky-500 rounded">
+          <span>Show Hotspot Depressions</span>
+        </label>
+
+        <div class="space-y-1 pt-1 border-t border-slate-800">
+          <div class="flex justify-between text-[11px] text-slate-400">
+            <span>Terrain Opacity:</span>
+            <span id="opacity-val" class="text-sky-300 font-bold">75%</span>
+          </div>
+          <input type="range" id="dem-opacity" min="0" max="100" value="75" class="w-full accent-sky-400 cursor-pointer">
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Topographical Diagnostic Panel -->
+    <aside class="w-96 bg-slate-900/95 border-l border-slate-800 p-5 flex flex-col gap-4 overflow-y-auto shrink-0 z-20">
+      
+      <!-- Elevation Color Legend -->
+      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+        <h4 class="text-xs font-bold text-slate-200 mb-2 flex items-center justify-between">
+          <span>🎨 Elevation Color Meaning</span>
+          <span class="text-[10px] text-slate-400 font-normal">Meters above MSL</span>
+        </h4>
+        <div class="h-4 rounded overflow-hidden" style="background: linear-gradient(to right, #253494, #2c7fb8, #41b6c4, #7fcdbb, #ffffcc, #fe9929, #d95f0e, #993404);"></div>
+        <div class="flex justify-between text-[10px] text-slate-400 mt-1.5 font-medium">
+          <span class="text-sky-400">0 - 5m (Coast)</span>
+          <span class="text-emerald-400">15m (Plains)</span>
+          <span class="text-amber-400">30m (Inland)</span>
+          <span class="text-rose-400">60m+ (Ridges)</span>
+        </div>
+      </div>
+
+      <!-- Live Inspector Card -->
+      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 shadow-md">
+        <div class="flex items-center justify-between mb-3 border-b border-slate-800/80 pb-2">
+          <span class="text-xs font-bold text-sky-400 flex items-center gap-1.5">
+            <i data-lucide="crosshair" class="w-3.5 h-3.5"></i> Physical DEM Inspector
+          </span>
+          <span id="insp-badge" class="text-[10px] px-2 py-0.5 rounded font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            Selected
+          </span>
+        </div>
+
+        <h3 id="insp-name" class="text-sm font-semibold text-slate-200 mb-3">Marina Beach Road (Coastline)</h3>
+
+        <div class="space-y-2 text-xs">
+          <div class="flex justify-between py-1.5 border-b border-slate-900">
+            <span class="text-slate-400">Ground Elevation (Z_ground):</span>
+            <span id="insp-elev" class="font-bold text-emerald-400 text-sm">5.2 m MSL</span>
+          </div>
+          <div class="flex justify-between py-1.5 border-b border-slate-900">
+            <span class="text-slate-400">Overland Slope (S0):</span>
+            <span id="insp-slope" class="font-bold text-amber-400">0.008 m/m (0.8%)</span>
+          </div>
+          <div class="flex justify-between py-1.5 border-b border-slate-900">
+            <span class="text-slate-400">Aspect (Flow Direction):</span>
+            <span id="insp-aspect" class="font-bold text-purple-400">95° (East to Bay of Bengal)</span>
+          </div>
+          <div class="flex justify-between py-1.5 border-b border-slate-900">
+            <span class="text-slate-400">Catchment Accumulation:</span>
+            <span id="insp-acc" class="font-bold text-sky-400">High (Coastal Collector)</span>
+          </div>
+          <div class="flex justify-between py-1.5">
+            <span class="text-slate-400">Flood Inundation Vulnerability:</span>
+            <span id="insp-risk" class="font-bold text-rose-400">CRITICAL (Low Sea Elevation)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Educational Breakdown: What this Output Means -->
+      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2.5 text-xs">
+        <h4 class="font-bold text-slate-200 flex items-center gap-1.5">
+          <i data-lucide="info" class="w-3.5 h-3.5 text-sky-400"></i> What Does This DEM Output Mean?
+        </h4>
+        <div class="space-y-2 text-[11px] text-slate-300 leading-relaxed">
+          <p>
+            <strong class="text-sky-300">1. Blue/Teal Areas (0m - 8m):</strong> Lowest zones in Chennai. Includes Marina coast, Velachery lakebed, Pulianthope, and canal corridors. <em>Water naturally drains INTO these areas.</em>
+          </p>
+          <p>
+            <strong class="text-amber-300">2. Yellow/Orange Areas (15m - 30m):</strong> Central city plateau (Guindy, Nungambakkam, T. Nagar). Normal urban drainage relies on gentle slopes towards the coast.
+          </p>
+          <p>
+            <strong class="text-rose-300">3. Red/Brown Areas (40m - 65m+):</strong> Western elevated ridges (Pallavaram, Porur). High velocity runoff rushes down from here into the lower city.
+          </p>
+          <p>
+            <strong class="text-emerald-300">4. Burned Canals:</strong> The 825 blue lines etched into the DEM ensure stormwater flows towards the Bay of Bengal through Buckingham Canal, Adyar, and Cooum.
+          </p>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <script>
+    // Initialize Map centered on Greater Chennai
+    const map = L.map('map', { zoomControl: true }).setView([13.04, 80.22], 12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      attribution: '&copy; CartoDB &copy; OpenStreetMap'
+    }).addTo(map);
+
+    // Continuous 2D DEM Raster Overlay generated by Layer 1
+    const demOverlayBounds = [
+      [12.648572680870833, 79.9470527614598],
+      [13.351367475969555, 80.36187022640648]
+    ];
+    const demLayer = L.imageOverlay('data/chennai_dem_overlay.png', demOverlayBounds, {
+      opacity: 0.75,
+      interactive: false
+    }).addTo(map);
+
+    // Layer Toggle Controls
+    document.getElementById('toggle-dem').addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(demLayer);
+      else map.removeLayer(demLayer);
+    });
+
+    const opacitySlider = document.getElementById('dem-opacity');
+    opacitySlider.addEventListener('input', (e) => {
+      const val = e.target.value / 100.0;
+      demLayer.setOpacity(val);
+      document.getElementById('opacity-val').innerText = `${e.target.value}%`;
+    });
+
+    // Color mapper for markers
+    function getElevationColor(elev) {
+      if (elev < 8) return '#0055ff';
+      if (elev < 14) return '#00bb88';
+      if (elev < 22) return '#ddaa00';
+      if (elev < 35) return '#ff5500';
+      return '#aa0000';
+    }
+
+    const keyPoints = [
+      { name: "Marina Beach Road (Kamarajar Salai)", lat: 13.0500, lon: 80.2800, elev: 5.2, slope: "0.008 m/m (0.8%)", aspect: "95° (East to Bay of Bengal)", acc: "High (Coastal Collector)", risk: "CRITICAL (Low Sea Elevation)" },
+      { name: "Velachery Main Road / Lake Basin", lat: 12.9815, lon: 80.2180, elev: 6.8, slope: "0.005 m/m (0.5%)", aspect: "110° (East)", acc: "Extremely High (Catchment Sump)", risk: "CRITICAL (Depression Surcharge)" },
+      { name: "Gengu Reddy Subway Underpass", lat: 13.0785, lon: 80.2520, elev: 4.8, slope: "0.015 m/m (1.5%)", aspect: "85° (East)", acc: "High (Sag Inflow)", risk: "CRITICAL (Underpass Breach)" },
+      { name: "Pulianthope High Road", lat: 13.0950, lon: 80.2650, elev: 6.1, slope: "0.006 m/m (0.6%)", aspect: "90° (East)", acc: "High (Otteri Nullah Catchment)", risk: "HIGH (Canal Backwater)" },
+      { name: "T. Nagar (Usman Road)", lat: 13.0418, lon: 80.2341, elev: 14.5, slope: "0.012 m/m (1.2%)", aspect: "98° (East)", acc: "Moderate", risk: "HIGH (Commercial Inundation)" },
+      { name: "Nungambakkam High Road (IMD AWS)", lat: 13.0674, lon: 80.2443, elev: 16.0, slope: "0.018 m/m (1.8%)", aspect: "102° (East)", acc: "Moderate", risk: "MODERATE" },
+      { name: "Anna University Corridor (Guindy)", lat: 13.0110, lon: 80.2355, elev: 18.2, slope: "0.022 m/m (2.2%)", aspect: "115° (SE)", acc: "Moderate (Adyar Inflow)", risk: "MODERATE" },
+      { name: "Kathipara Junction (Alandur)", lat: 13.0067, lon: 80.2026, elev: 21.5, slope: "0.028 m/m (2.8%)", aspect: "120° (SE)", acc: "Low (Elevated Grade)", risk: "LOW" },
+      { name: "Porur Lake Junction (Poonamallee)", lat: 13.0380, lon: 80.1580, elev: 28.4, slope: "0.035 m/m (3.5%)", aspect: "95° (East)", acc: "Moderate", risk: "LOW" },
+      { name: "Pallavaram - St. Thomas Mount Ridge", lat: 12.9670, lon: 80.1450, elev: 52.0, slope: "0.075 m/m (7.5%)", aspect: "85° (East)", acc: "Low (Natural Ridge)", risk: "NEGLIGIBLE" }
+    ];
+
+    const markersGroup = L.layerGroup().addTo(map);
+
+    function selectPoint(p) {
+      document.getElementById('insp-name').innerText = p.name;
+      document.getElementById('insp-elev').innerText = `${p.elev} m MSL`;
+      document.getElementById('insp-slope').innerText = p.slope;
+      document.getElementById('insp-aspect').innerText = p.aspect;
+      document.getElementById('insp-acc').innerText = p.acc;
+      document.getElementById('insp-risk').innerText = p.risk;
+      
+      const badge = document.getElementById('insp-badge');
+      if (p.risk.includes('CRITICAL')) {
+        badge.className = 'text-[10px] px-2 py-0.5 rounded font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+        badge.innerText = 'Critical Risk';
+      } else if (p.risk.includes('HIGH')) {
+        badge.className = 'text-[10px] px-2 py-0.5 rounded font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        badge.innerText = 'High Caution';
+      } else {
+        badge.className = 'text-[10px] px-2 py-0.5 rounded font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        badge.innerText = 'Safe / Low';
+      }
+    }
+
+    keyPoints.forEach(p => {
+      const marker = L.circleMarker([p.lat, p.lon], {
+        radius: 8,
+        fillColor: getElevationColor(p.elev),
+        color: '#ffffff',
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.95
+      }).addTo(markersGroup);
+
+      marker.bindTooltip(`<b>${p.name}</b><br>Elevation: ${p.elev}m MSL`, { permanent: false });
+      marker.on('click', () => selectPoint(p));
+    });
+
+    document.getElementById('toggle-markers').addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(markersGroup);
+      else map.removeLayer(markersGroup);
+    });
+
+    selectPoint(keyPoints[0]);
+    lucide.createIcons();
+  </script>
+</body>
+</html>

@@ -106,25 +106,25 @@ cd Smart-India-Hackathon-2026
 pip install -r requirements.txt
 `
 
-### 2. Run the Layer 0 Test Suite (25 Tests)
-Run pytest to verify radar scraping, PySteps optical flow nowcasting, Kriging bias calibration, and mass conservation:
-`powershell
-pytest tests/test_layer0_rainfall.py -v
-`
-*Expected result: 25 passed in ~8 seconds (100% pass rate).*
+### 2. Run the Full Layer 0 Test Suite (31 Tests)
+Run pytest to verify radar scraping, PySteps optical flow nowcasting, Kriging bias calibration, CML cell tower inversion, 1-minute stochastic sub-stepping, 100m super-resolution, and 2D-Var Kalman fusion:
+```powershell
+pytest tests/ -v
+```
+*Expected result: 31 passed in ~2.5 seconds (100% pass rate).*
 
 ### 3. Run the Standalone Layer 0 Pipeline
 Execute the complete rainfall ingestion and nowcasting engine:
-`powershell
+```powershell
 python -m src.layer0.pipeline
-`
-This fetches live IMD radar grids, runs the optical flow cloud nowcast, calibrates with ground rain gauges, and generates model-ready rain vectors for all 7,894 streets in Chennai.
+```
+This fetches live IMD radar grids, fuses 35 GCC municipal ward gauges and cellular microwave links (CML), runs optical flow cloud nowcasting, and generates mass-conserved rainfall vectors for all 7,894 streets in Chennai.
 
 ### 4. Launch the Tactical Command Twin (1-Click)
 Double-click launch_dashboard.bat or run:
-`powershell
+```powershell
 .\launch_dashboard.bat
-`
+```
 This starts the backend API on port 8000 and opens the Web GIS Command Twin in your browser:
 - **0-180 Min Nowcast Slider**: Scrub forward in time to watch inundation develop street-by-street.
 - **Surcharge Diagnostic Inspector**: Click any road or manhole to inspect nominal diameter, hydraulic head, and backflow rate.

@@ -67,3 +67,11 @@ SIH2026_Urban_Flood_Master_Guide.md
 # Environment secrets
 .env
 .env.local
+
+# Node
+node_modules/
+npm-debug.log
+
+# Database
+*.sqlite
+*.db

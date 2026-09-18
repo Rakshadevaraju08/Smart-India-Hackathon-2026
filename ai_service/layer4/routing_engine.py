@@ -19,8 +19,14 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from src.layer3.graph_builder import StreetDrainageGraph
-from src.layer4.risk_cost_evaluator import RiskCostEvaluator, VEHICLE_PROFILES
+try:
+    from ai_service.layer3.graph_builder import StreetDrainageGraph
+    from ai_service.layer4.risk_cost_evaluator import RiskCostEvaluator, VEHICLE_PROFILES
+except ImportError:
+    from ..layer3.graph_builder import StreetDrainageGraph
+    from .risk_cost_evaluator import RiskCostEvaluator, VEHICLE_PROFILES
+
+
 
 logger = logging.getLogger(__name__)
 

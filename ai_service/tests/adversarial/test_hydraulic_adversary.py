@@ -700,6 +700,14 @@ class HydraulicAdversaryRunner:
 
 
 if __name__ == "__main__":
-    runner = HydraulicAdversaryRunner(Path(__file__).parent.parent.parent)
+    current = Path(__file__).resolve()
+    # Find project root by locating frontend directory
+    project_root = current.parent
+    for _ in range(5):
+        if (project_root / "frontend").is_dir():
+            break
+        project_root = project_root.parent
+    runner = HydraulicAdversaryRunner(project_root)
     success = runner.run_all()
     sys.exit(0 if success else 1)
+

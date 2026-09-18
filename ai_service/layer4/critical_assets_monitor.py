@@ -14,7 +14,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import numpy as np
 
-from src.layer3.graph_builder import StreetDrainageGraph
+try:
+    from ai_service.layer3.graph_builder import StreetDrainageGraph
+except ImportError:
+    from ..layer3.graph_builder import StreetDrainageGraph
+
+
 
 logger = logging.getLogger(__name__)
 

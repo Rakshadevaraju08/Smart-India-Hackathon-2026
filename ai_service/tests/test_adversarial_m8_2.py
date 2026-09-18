@@ -1110,7 +1110,13 @@ class AdversarialChallengerM82:
 
 
 if __name__ == '__main__':
-    root_directory = Path(__file__).resolve().parent.parent
+    current = Path(__file__).resolve()
+    root_directory = current.parent
+    for _ in range(5):
+        if (root_directory / 'frontend').is_dir():
+            break
+        root_directory = root_directory.parent
     challenger = AdversarialChallengerM82(root_directory)
     result = challenger.run_all_challenges()
     sys.exit(0 if result['verdict'] == 'CONFIRM_CORRECTNESS' else 1)
+

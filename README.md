@@ -103,7 +103,7 @@ Clone the repository and install dependencies:
 `powershell
 git clone https://github.com/Team-Kairos-SIH/Smart-India-Hackathon-2026.git
 cd Smart-India-Hackathon-2026
-pip install -r requirements.txt
+pip install -r ai_service/requirements.txt
 `
 
 ### 2. Run the Full Layer 0 Test Suite (31 Tests)
@@ -116,7 +116,7 @@ pytest tests/ -v
 ### 3. Run the Standalone Layer 0 Pipeline
 Execute the complete rainfall ingestion and nowcasting engine:
 ```powershell
-python -m src.layer0.pipeline
+python -m ai_service.layer0.pipeline
 ```
 This fetches live IMD radar grids, fuses 35 GCC municipal ward gauges and cellular microwave links (CML), runs optical flow cloud nowcasting, and generates mass-conserved rainfall vectors for all 7,894 streets in Chennai.
 

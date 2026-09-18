@@ -53,12 +53,12 @@ import pandas as pd
 import cv2
 
 # Ensure SIH root is on sys.path
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-# Direct production imports from src.layer0 - NO ORACLES, NO FACADES
-from src.layer0 import (
+# Direct production imports from ai_service.layer0 - NO ORACLES, NO FACADES
+from ai_service.layer0 import (
     IMDRadarIngestion,
     IMDAWSIngestion,
     HistoricalArchiveLoader,
@@ -77,8 +77,15 @@ from src.layer0 import (
 )
 
 # Paths to authoritative datasets
-ROADS_DATASET_PATH = PROJECT_ROOT / "Google_Drive_Datasets" / "chennai_unified_flood_master_dataset.csv"
-RAINFALL_ZIP_PATH = PROJECT_ROOT / "Google_Drive_Datasets" / "01_Rainfall_Yashwanth" / "rainfall_data.zip"
+ROADS_DATASET_PATH = PROJECT_ROOT / "Datasets" / "chennai_unified_flood_master_dataset.csv"
+if not ROADS_DATASET_PATH.exists():
+    ROADS_DATASET_PATH = PROJECT_ROOT / "Google_Drive_Datasets" / "chennai_unified_flood_master_dataset.csv"
+
+RAINFALL_ZIP_PATH = PROJECT_ROOT / "Datasets" / "01_Rainfall_Yashwanth" / "rainfall_data.zip"
+if not RAINFALL_ZIP_PATH.exists():
+    RAINFALL_ZIP_PATH = PROJECT_ROOT / "Datasets" / "01_Rainfall_Yashwanth" / "rainfall_data"
+if not RAINFALL_ZIP_PATH.exists():
+    RAINFALL_ZIP_PATH = PROJECT_ROOT / "Google_Drive_Datasets" / "01_Rainfall_Yashwanth" / "rainfall_data.zip"
 
 CHENNAI_BOUNDS = DEFAULT_CHENNAI_BOUNDS
 GRID_SHAPE = DEFAULT_GRID_SHAPE

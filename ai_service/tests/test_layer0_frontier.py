@@ -13,14 +13,20 @@ import unittest
 from pathlib import Path
 import numpy as np
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-from src.layer0.cml_ingestor import CMLLink, CMLPrecipitationEngine, CHENNAI_CML_TOPOLOGY
-from src.layer0.stochastic_nowcaster import StochasticCascadeNowcaster, StochasticForecastResult
-from src.layer0.super_resolution import TopographicSuperResolutionEngine, SuperResolutionResult
-from src.layer0.fusion import MultiSensorKalmanFusion
+try:
+    from ai_service.layer0.cml_ingestor import CMLLink, CMLPrecipitationEngine, CHENNAI_CML_TOPOLOGY
+    from ai_service.layer0.stochastic_nowcaster import StochasticCascadeNowcaster, StochasticForecastResult
+    from ai_service.layer0.super_resolution import TopographicSuperResolutionEngine, SuperResolutionResult
+    from ai_service.layer0.fusion import MultiSensorKalmanFusion
+except ImportError:
+    from layer0.cml_ingestor import CMLLink, CMLPrecipitationEngine, CHENNAI_CML_TOPOLOGY
+    from layer0.stochastic_nowcaster import StochasticCascadeNowcaster, StochasticForecastResult
+    from layer0.super_resolution import TopographicSuperResolutionEngine, SuperResolutionResult
+    from layer0.fusion import MultiSensorKalmanFusion
 
 
 class TestLayer0FrontierTools(unittest.TestCase):

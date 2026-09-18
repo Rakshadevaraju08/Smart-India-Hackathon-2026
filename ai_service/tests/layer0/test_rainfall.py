@@ -56,25 +56,46 @@ import cv2
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+if str(PROJECT_ROOT / "ai_service") not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT / "ai_service"))
 
 # Direct production imports from ai_service.layer0 - NO ORACLES, NO FACADES
-from ai_service.layer0 import (
-    IMDRadarIngestion,
-    IMDAWSIngestion,
-    HistoricalArchiveLoader,
-    StormMotionNowcaster,
-    StreetDisaggregator,
-    GaugeRadarCalibrator,
-    Layer0Pipeline,
-    dbz_to_rain_rate,
-    rain_rate_to_dbz,
-    DEFAULT_CHENNAI_BOUNDS,
-    DEFAULT_GRID_SHAPE,
-    DEFAULT_HORIZONS,
-    CHENNAI_AWS_STATIONS,
-    ROAD_CLASS_AREAS,
-    DEFAULT_ROAD_AREA,
-)
+try:
+    from ai_service.layer0 import (
+        IMDRadarIngestion,
+        IMDAWSIngestion,
+        HistoricalArchiveLoader,
+        StormMotionNowcaster,
+        StreetDisaggregator,
+        GaugeRadarCalibrator,
+        Layer0Pipeline,
+        dbz_to_rain_rate,
+        rain_rate_to_dbz,
+        DEFAULT_CHENNAI_BOUNDS,
+        DEFAULT_GRID_SHAPE,
+        DEFAULT_HORIZONS,
+        CHENNAI_AWS_STATIONS,
+        ROAD_CLASS_AREAS,
+        DEFAULT_ROAD_AREA,
+    )
+except ImportError:
+    from layer0 import (
+        IMDRadarIngestion,
+        IMDAWSIngestion,
+        HistoricalArchiveLoader,
+        StormMotionNowcaster,
+        StreetDisaggregator,
+        GaugeRadarCalibrator,
+        Layer0Pipeline,
+        dbz_to_rain_rate,
+        rain_rate_to_dbz,
+        DEFAULT_CHENNAI_BOUNDS,
+        DEFAULT_GRID_SHAPE,
+        DEFAULT_HORIZONS,
+        CHENNAI_AWS_STATIONS,
+        ROAD_CLASS_AREAS,
+        DEFAULT_ROAD_AREA,
+    )
 
 # Paths to authoritative datasets
 ROADS_DATASET_PATH = PROJECT_ROOT / "Datasets" / "chennai_unified_flood_master_dataset.csv"

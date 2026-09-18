@@ -25,9 +25,11 @@ from .benchmark_validator import BenchmarkValidator
 
 # Seamless integration with Layer 0 if available
 try:
-    from src.layer0.pipeline import Layer0Pipeline
+    from ai_service.layer0.pipeline import Layer0Pipeline
 except ImportError:
     Layer0Pipeline = None
+
+
 
 logger = logging.getLogger(__name__)
 

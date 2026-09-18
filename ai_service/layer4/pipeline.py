@@ -15,9 +15,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import numpy as np
 
-from src.layer3.pipeline import Layer3Pipeline
-from src.layer4.routing_engine import DynamicRoutingEngine
-from src.layer4.critical_assets_monitor import CriticalAssetsMonitor, CHENNAI_SUBSTATIONS, CRITICAL_FACILITIES
+try:
+    from ai_service.layer3.pipeline import Layer3Pipeline
+    from ai_service.layer4.routing_engine import DynamicRoutingEngine
+    from ai_service.layer4.critical_assets_monitor import CriticalAssetsMonitor, CHENNAI_SUBSTATIONS, CRITICAL_FACILITIES
+except ImportError:
+    from ..layer3.pipeline import Layer3Pipeline
+    from .routing_engine import DynamicRoutingEngine
+    from .critical_assets_monitor import CriticalAssetsMonitor, CHENNAI_SUBSTATIONS, CRITICAL_FACILITIES
+
+
 
 logger = logging.getLogger(__name__)
 

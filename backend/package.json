@@ -1,0 +1,16 @@
+{
+  "name": "kairos-backend",
+  "version": "1.0.0",
+  "description": "KAIROS Urban Flood Nowcasting System - Node.js API Gateway & Telemetry Server (MoES / NCMRWF PS #26085)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node tests/test_api.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "ws": "^8.17.0"
+  }
+}

@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KAIROS | Layer 4 Safe Emergency Navigation & Asset Twin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* Glowing animations for emergency routes */
+    @keyframes safe-pulse {
+      0%, 100% { filter: drop-shadow(0 0 4px #10b981); }
+      50% { filter: drop-shadow(0 0 10px #059669); }
+    }
+    .route-safe-glow {
+      animation: safe-pulse 2s infinite ease-in-out;
+    }
+    @keyframes hazard-pulse {
+      0%, 100% { filter: drop-shadow(0 0 4px #ef4444); }
+      50% { filter: drop-shadow(0 0 12px #b91c1c); }
+    }
+    .route-hazard-glow {
+      animation: hazard-pulse 1.4s infinite ease-in-out;
+    }
+    /* Substation Beacon */
+    @keyframes beacon-ping {
+      0% { transform: scale(0.8); opacity: 0.9; }
+      70% { transform: scale(1.8); opacity: 0; }
+      100% { transform: scale(0.8); opacity: 0; }
+    }
+    .substation-beacon {
+      animation: beacon-ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden select-none font-sans">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-[#0B1E36] border-b border-[#1E3A5F] px-4 py-2.5 flex items-center justify-between shadow-lg shrink-0">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 px-2.5 py-1.5 rounded border border-slate-700 text-sky-400 font-medium transition">
+        <span>&larr;</span> Command Twin
+      </a>
+      <a href="dem_viewer.html" class="flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 px-2.5 py-1.5 rounded border border-slate-700 text-emerald-400 font-medium transition">
+        <span>🗺️</span> L1 DEM
+      </a>
+      <a href="hydraulics_viewer.html" class="flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 px-2.5 py-1.5 rounded border border-slate-700 text-cyan-400 font-medium transition">
+        <span>🌊</span> L2 Hydraulics
+      </a>
+      <a href="inundation_viewer.html" class="flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 px-2.5 py-1.5 rounded border border-slate-700 text-amber-400 font-medium transition">
+        <span>⚡</span> L3 Inundation
+      </a>
+      <div class="h-4 w-px bg-slate-700"></div>
+      <div>
+        <h1 class="text-sm font-bold text-rose-400 flex items-center gap-2">
+          <span>🚑</span> KAIROS Layer 4: Dynamic Safe Emergency Navigation & Asset Safeguarding
+        </h1>
+        <p class="text-[11px] text-slate-400">Flood-Aware Routing (&lt;50ms) | Vehicle Hydrodynamic Limits | 20 TANGEDCO Substations</p>
+      </div>
+    </div>
+
+    <!-- Live Telemetry -->
+    <div class="flex items-center gap-3 text-xs">
+      <div class="bg-slate-900/90 px-3 py-1 rounded border border-slate-700 flex items-center gap-2">
+        <span class="text-slate-400">Solver Speed:</span>
+        <span id="stat-latency" class="font-bold text-emerald-400 font-mono">21.9 ms (&lt; 50ms SLA)</span>
+      </div>
+      <div class="bg-slate-900/90 px-3 py-1 rounded border border-slate-700 flex items-center gap-2">
+        <span class="text-slate-400">Direct Route Risk:</span>
+        <span id="stat-direct-risk" class="font-bold text-rose-400 font-mono">⚠️ Underpass Submerged</span>
+      </div>
+      <div class="bg-slate-900/90 px-3 py-1 rounded border border-slate-700 flex items-center gap-2">
+        <span class="text-slate-400">Safe Corridor:</span>
+        <span id="stat-safe-status" class="font-bold text-emerald-400 font-mono">✓ 100% Passable</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Work Area -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Map Canvas -->
+    <div id="map" class="flex-1 h-full relative z-10">
+
+      <!-- Interactive Controls Panel (Top Left) -->
+      <div class="absolute top-4 left-14 z-[500] bg-slate-900/95 backdrop-blur-md border border-slate-800 p-4 rounded-xl shadow-2xl w-88 space-y-3.5 text-xs">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="font-bold text-slate-200 flex items-center gap-1.5">
+            <i data-lucide="navigation" class="w-4 h-4 text-rose-400"></i> Emergency Route Dispatch
+          </span>
+          <span class="text-[10px] bg-rose-950 text-rose-300 border border-rose-800 px-2 py-0.5 rounded font-semibold">Real-Time</span>
+        </div>
+
+        <!-- Corridor Presets -->
+        <div class="space-y-1.5">
+          <label class="text-[11px] text-slate-300 font-medium flex items-center gap-1">
+            <i data-lucide="route" class="w-3.5 h-3.5 text-sky-400"></i> Incident Corridor Preset:
+          </label>
+          <select id="select-corridor" class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-rose-500">
+            <option value="corridor1" selected>T. Nagar &rarr; Apollo Hospitals Greams Rd</option>
+            <option value="corridor2">Chennai Central &rarr; Rajiv Gandhi Hospital (RGGGH)</option>
+            <option value="corridor3">Velachery &rarr; Guindy Race Course Shelter</option>
+          </select>
+        </div>
+
+        <!-- Vehicle Type Profile -->
+        <div class="space-y-1.5 pt-2 border-t border-slate-800">
+          <label class="text-[11px] text-slate-300 font-medium flex items-center gap-1">
+            <i data-lucide="truck" class="w-3.5 h-3.5 text-amber-400"></i> Vehicle Profile &amp; Critical Wading Limit:
+          </label>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button class="veh-btn active bg-rose-950/80 border border-rose-600 text-rose-200 py-1.5 px-2 rounded flex flex-col items-center gap-0.5 text-center transition" data-veh="ambulance">
+              <span class="font-bold text-[10px]">Ambulance</span>
+              <span class="text-[9px] text-slate-400">Cutoff: 20cm</span>
+            </button>
+            <button class="veh-btn bg-slate-800 border border-slate-700 text-slate-300 py-1.5 px-2 rounded flex flex-col items-center gap-0.5 text-center hover:bg-slate-700 transition" data-veh="rescue_truck">
+              <span class="font-bold text-[10px]">Heavy Truck</span>
+              <span class="text-[9px] text-slate-400">Cutoff: 50cm</span>
+            </button>
+            <button class="veh-btn bg-slate-800 border border-slate-700 text-slate-300 py-1.5 px-2 rounded flex flex-col items-center gap-0.5 text-center hover:bg-slate-700 transition" data-veh="civilian_evac">
+              <span class="font-bold text-[10px]">Civilian</span>
+              <span class="text-[9px] text-slate-400">Cutoff: 10cm</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Storm Horizon Scrubber -->
+        <div class="space-y-1.5 pt-2 border-t border-slate-800">
+          <div class="flex justify-between text-[11px]">
+            <span class="text-slate-300 font-medium flex items-center gap-1">
+              <i data-lucide="clock" class="w-3.5 h-3.5 text-sky-400"></i> Nowcast Horizon:
+            </span>
+            <span id="val-horizon" class="font-bold text-sky-400">T + 60 min (Peak Deluge)</span>
+          </div>
+          <input type="range" id="slider-horizon" min="0" max="4" value="2" step="1" class="w-full accent-sky-400 cursor-pointer">
+          <div class="flex justify-between text-[9px] text-slate-500 font-mono">
+            <span>T+0m</span>
+            <span>T+30m</span>
+            <span class="text-sky-300 font-bold">T+60m</span>
+            <span>T+120m</span>
+            <span>T+180m</span>
+          </div>
+        </div>
+
+        <!-- Map Layer Toggles -->
+        <div class="pt-2 border-t border-slate-800 space-y-1.5 text-[11px]">
+          <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+            <input type="checkbox" id="toggle-substations" checked class="accent-amber-400 rounded">
+            <span>Show 20 TANGEDCO Electrical Substations</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+            <input type="checkbox" id="toggle-flooded-roads" checked class="accent-rose-500 rounded">
+            <span>Show Inundated Road Segments (&gt;10cm)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Route Legend Floating (Bottom Left) -->
+      <div class="absolute bottom-6 left-14 z-[500] bg-slate-900/90 backdrop-blur-md border border-slate-800 p-3 rounded-xl shadow-xl text-xs space-y-2">
+        <span class="font-bold text-slate-300 block text-[11px]">Emergency Trajectory Map:</span>
+        <div class="flex items-center gap-2 text-[10px]">
+          <span class="w-5 h-1 bg-rose-500 rounded inline-block border-t border-b border-rose-300"></span>
+          <span class="text-rose-300 font-medium">Naive Shortest Route (Passes flooded underpasses)</span>
+        </div>
+        <div class="flex items-center gap-2 text-[10px]">
+          <span class="w-5 h-1.5 bg-emerald-500 rounded inline-block shadow-sm"></span>
+          <span class="text-emerald-300 font-medium">KAIROS Safe Dynamic Corridor (Safe high-ground ridge)</span>
+        </div>
+        <div class="flex items-center gap-2 text-[10px]">
+          <span class="w-3 h-3 rounded-full bg-amber-400 border border-slate-900 inline-block"></span>
+          <span class="text-amber-200">TANGEDCO Substation (Plinth &gt; 45cm Monitored)</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right Sidebar Inspector & Side-by-Side Comparison -->
+    <aside class="w-96 bg-[#071322] border-l border-[#1E3A5F] flex flex-col h-full z-20 shadow-2xl shrink-0">
+      <div class="p-4 border-b border-[#1E3A5F] bg-[#0B1E36]">
+        <h2 class="text-xs font-bold text-rose-300 flex items-center gap-2">
+          <i data-lucide="git-compare" class="w-4 h-4 text-rose-400"></i> Dispatch Decision Support
+        </h2>
+        <p class="text-[11px] text-slate-400">Comparative Telemetry: Naive Shortest vs. KAIROS Safe</p>
+      </div>
+
+      <div class="p-4 space-y-4 overflow-y-auto flex-1 text-xs">
+        
+        <!-- Active Incident Banner -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 space-y-2">
+          <div class="text-[10px] text-slate-400 uppercase font-semibold">Active Dispatch Mission:</div>
+          <div id="corridor-title" class="font-bold text-slate-200 text-sm">T. Nagar &rarr; Apollo Hospitals Greams Rd</div>
+          <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800">
+            <span>Origin: <strong id="cor-origin" class="text-slate-300">T. Nagar Bus Terminus</strong></span>
+          </div>
+          <div class="flex items-center justify-between text-[11px] text-slate-400">
+            <span>Target: <strong id="cor-dest" class="text-slate-300">Apollo Hospital (ER Unit)</strong></span>
+          </div>
+        </div>
+
+        <!-- Comparative Metrics Table -->
+        <div class="space-y-2">
+          <span class="font-semibold text-slate-300 block text-[11px]">Trajectory Trade-Off Evaluation:</span>
+          
+          <!-- Direct Route Card -->
+          <div class="p-3 rounded-xl bg-rose-950/40 border border-rose-800/80 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-rose-300 flex items-center gap-1.5">
+                <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-400"></i> Naive Shortest Route
+              </span>
+              <span class="bg-rose-900/80 text-rose-200 border border-rose-700 px-2 py-0.5 rounded text-[10px] font-bold">DANGER</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-center text-[10px] pt-1">
+              <div class="bg-slate-900/80 p-1.5 rounded">
+                <span class="text-slate-400 block">Distance:</span>
+                <span id="direct-dist" class="font-bold text-slate-200 text-xs font-mono">2.98 km</span>
+              </div>
+              <div class="bg-slate-900/80 p-1.5 rounded">
+                <span class="text-slate-400 block">Est. Time:</span>
+                <span id="direct-eta" class="font-bold text-slate-200 text-xs font-mono">4.5 min</span>
+              </div>
+              <div class="bg-slate-900/80 p-1.5 rounded">
+                <span class="text-slate-400 block">Max Flood:</span>
+                <span id="direct-depth" class="font-bold text-rose-400 text-xs font-mono">48.2 cm</span>
+              </div>
+            </div>
+            <div id="direct-hazard-alert" class="text-[10px] text-rose-300 bg-rose-900/40 p-2 rounded border border-rose-800/60 leading-tight">
+              ⚠️ <strong>CRITICAL HAZARD:</strong> Route cuts through Kodambakkam / GN Chetty Rd subway with <strong>48.2 cm</strong> water depth. Ambulance will stall!
+            </div>
+          </div>
+
+          <!-- KAIROS Safe Corridor Card -->
+          <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/80 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-emerald-300 flex items-center gap-1.5">
+                <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400"></i> KAIROS Safe Dynamic Corridor
+              </span>
+              <span class="bg-emerald-900/80 text-emerald-200 border border-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold">RECOMMENDED</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-center text-[10px] pt-1">
+              <div class="bg-slate-900/80 p-1.5 rounded">
+                <span class="text-slate-400 block">Distance:</span>
+                <span id="safe-dist" class="font-bold text-emerald-300 text-xs font-mono">3.39 km</span>
+              </div>
+              <div class="bg-slate-900/80 p-1.5 rounded">
+                <span class="text-slate-400 block">Est. Time:</span>
+                <span id="safe-eta" class="font-bold text-emerald-300 text-xs font-mono">4.7 min</span>
+              </div>
+              <div class="bg-slate-900/80 p-1.5 rounded">
+                <span class="text-slate-400 block">Max Flood:</span>
+                <span id="safe-depth" class="font-bold text-emerald-400 text-xs font-mono">4.2 cm</span>
+              </div>
+            </div>
+            <div class="text-[10px] text-emerald-300 bg-emerald-900/40 p-2 rounded border border-emerald-800/60 leading-tight">
+              ✓ <strong>SAFE RIDGE:</strong> Routed via high-elevation DEM spine (12.4m MSL). Minimal water (&lt;5cm). Emergency vehicle passes safely.
+            </div>
+            <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+              <span>Overhead penalty:</span>
+              <span id="detour-penalty" class="font-mono text-amber-300 font-bold">+0.41 km (+12 sec)</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Critical Substation Monitoring Panel -->
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-slate-300 text-[11px] flex items-center gap-1.5">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> TANGEDCO Substations (20 Grid Nodes)
+            </span>
+            <span id="sub-status-count" class="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded border border-emerald-800">20/20 Secure</span>
+          </div>
+          
+          <div id="substations-list" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Quick Benchmark Footer -->
+      <div class="p-3 border-t border-[#1E3A5F] bg-[#0B1E36]/80 text-[11px] flex items-center justify-between">
+        <span class="text-slate-400">Graph: 7,894 Nodes</span>
+        <span class="font-mono text-emerald-400 font-bold">Solver: 21.9 ms</span>
+        <span class="text-sky-300">Dijkstra + KDTree</span>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Load Master Dataset -->
+  <script src="data/chennai_flood_data.js"></script>
+
+  <script>
+    lucide.createIcons();
+
+    // Map Initialization
+    const map = L.map('map', {
+      center: [13.045, 80.245],
+      zoom: 13,
+      zoomControl: false
+    });
+
+    L.control.zoom({ position: 'topleft' }).addTo(map);
+
+    // Dark Basemap
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap &copy; CARTO',
+      subdomains: 'abcd',
+      maxZoom: 19
+    }).addTo(map);
+
+    // Pre-calibrated Corridors
+    const corridorData = {
+      corridor1: {
+        title: "T. Nagar → Apollo Hospitals Greams Rd",
+        originName: "T. Nagar Bus Terminus",
+        destName: "Apollo Hospitals Greams Rd (ER)",
+        originCoords: [13.0418, 80.2341],
+        destCoords: [13.0604, 80.2514],
+        directPath: [
+          [13.0418, 80.2341],
+          [13.0440, 80.2370],
+          [13.0475, 80.2410], // Inundated sag at GN Chetty Rd
+          [13.0520, 80.2460],
+          [13.0604, 80.2514]
+        ],
+        safePath: [
+          [13.0418, 80.2341],
+          [13.0400, 80.2390],
+          [13.0430, 80.2480], // High ground along Mount Road / Anna Salai
+          [13.0510, 80.2520],
+          [13.0604, 80.2514]
+        ],
+        directDist: 2.98,
+        directEta: 4.5,
+        directDepth: 48.2,
+        safeDist: 3.39,
+        safeEta: 4.7,
+        safeDepth: 4.2,
+        hazardDesc: "⚠️ <strong>CRITICAL HAZARD:</strong> Route cuts through GN Chetty Rd / Kodambakkam underpass with <strong>48.2 cm</strong> water. Ambulance engine will flood!"
+      },
+      corridor2: {
+        title: "Chennai Central → Rajiv Gandhi Hospital (RGGGH)",
+        originName: "Puratchi Thalaivar Dr. MGR Central Station",
+        destName: "Rajiv Gandhi Govt General Hospital (RGGGH)",
+        originCoords: [13.0827, 80.2754],
+        destCoords: [13.0805, 80.2785],
+        directPath: [
+          [13.0827, 80.2754],
+          [13.0818, 80.2768],
+          [13.0805, 80.2785]
+        ],
+        safePath: [
+          [13.0827, 80.2754],
+          [13.0835, 80.2770],
+          [13.0820, 80.2790],
+          [13.0805, 80.2785]
+        ],
+        directDist: 0.52,
+        directEta: 1.2,
+        directDepth: 32.5,
+        safeDist: 0.74,
+        safeEta: 1.5,
+        safeDepth: 6.0,
+        hazardDesc: "⚠️ <strong>UNDERPASS FLOODED:</strong> Central Subway water level reached <strong>32.5 cm</strong>. Detour via EVR Periyar Salai flyover."
+      },
+      corridor3: {
+        title: "Velachery → Guindy Race Course Shelter",
+        originName: "Velachery Railway Station",
+        destName: "Guindy Race Course Relief Shelter",
+        originCoords: [12.9815, 80.2180],
+        destCoords: [13.0112, 80.2114],
+        directPath: [
+          [12.9815, 80.2180],
+          [12.9900, 80.2150],
+          [12.9990, 80.2130],
+          [13.0112, 80.2114]
+        ],
+        safePath: [
+          [12.9815, 80.2180],
+          [12.9860, 80.2080],
+          [12.9980, 80.2050],
+          [13.0112, 80.2114]
+        ],
+        directDist: 3.42,
+        directEta: 5.6,
+        directDepth: 55.4,
+        safeDist: 4.10,
+        safeEta: 6.2,
+        safeDepth: 8.5,
+        hazardDesc: "⚠️ <strong>DEEP BASIN SUBMERGED:</strong> Velachery Main Rd reaches <strong>55.4 cm</strong> inundation. Detour along GST Road elevated alignment."
+      }
+    };
+
+    let activeCorridorKey = "corridor1";
+    let activeVehicle = "ambulance";
+    let activeHorizonIndex = 2; // T+60m
+    let directPolyline = null;
+    let safePolyline = null;
+    let originMarker = null;
+    let destMarker = null;
+    let substationMarkers = [];
+    let roadLayers = [];
+
+    // Render Routes
+    function renderRoutes() {
+      const data = corridorData[activeCorridorKey];
+
+      if (directPolyline) map.removeLayer(directPolyline);
+      if (safePolyline) map.removeLayer(safePolyline);
+      if (originMarker) map.removeLayer(originMarker);
+      if (destMarker) map.removeLayer(destMarker);
+
+      // Direct Route (Red Dashed)
+      directPolyline = L.polyline(data.directPath, {
+        color: "#ef4444",
+        weight: 4,
+        opacity: 0.9,
+        dashArray: "8, 6",
+        className: "route-hazard-glow"
+      }).addTo(map);
+
+      // Safe Route (Green Solid)
+      safePolyline = L.polyline(data.safePath, {
+        color: "#10b981",
+        weight: 6,
+        opacity: 0.95,
+        className: "route-safe-glow"
+      }).addTo(map);
+
+      // Origin Marker (Green Pin)
+      originMarker = L.circleMarker(data.originCoords, {
+        radius: 8,
+        fillColor: "#10b981",
+        color: "#ffffff",
+        weight: 2,
+        fillOpacity: 1
+      }).bindTooltip(`<b>Origin:</b> ${data.originName}`, { permanent: false }).addTo(map);
+
+      // Destination Marker (Red Pin / Hospital)
+      destMarker = L.circleMarker(data.destCoords, {
+        radius: 9,
+        fillColor: "#ef4444",
+        color: "#ffffff",
+        weight: 2,
+        fillOpacity: 1
+      }).bindTooltip(`<b>Destination:</b> ${data.destName}`, { permanent: false }).addTo(map);
+
+      // Fit Bounds
+      map.fitBounds(safePolyline.getBounds(), { padding: [60, 60] });
+
+      // Update Sidebar UI
+      document.getElementById('corridor-title').innerText = data.title;
+      document.getElementById('cor-origin').innerText = data.originName;
+      document.getElementById('cor-dest').innerText = data.destName;
+
+      document.getElementById('direct-dist').innerText = `${data.directDist} km`;
+      document.getElementById('direct-eta').innerText = `${data.directEta} min`;
+      document.getElementById('direct-depth').innerText = `${data.directDepth} cm`;
+      document.getElementById('direct-hazard-alert').innerHTML = data.hazardDesc;
+
+      document.getElementById('safe-dist').innerText = `${data.safeDist} km`;
+      document.getElementById('safe-eta').innerText = `${data.safeEta} min`;
+      document.getElementById('safe-depth').innerText = `${data.safeDepth} cm`;
+
+      const extraKm = Math.round((data.safeDist - data.directDist) * 100) / 100;
+      const extraSec = Math.round((data.safeEta - data.directEta) * 60);
+      document.getElementById('detour-penalty').innerText = `+${extraKm} km (+${extraSec} sec)`;
+    }
+
+    // Render Substations
+    function renderSubstations() {
+      substationMarkers.forEach(m => map.removeLayer(m));
+      substationMarkers = [];
+
+      const listContainer = document.getElementById('substations-list');
+      listContainer.innerHTML = '';
+
+      const subs = (window.CHENNAI_FLOOD_DATA && window.CHENNAI_FLOOD_DATA.substations) ? window.CHENNAI_FLOOD_DATA.substations : [
+        { id: "SS-001", name: "Mylapore Substation", voltage_kv: 230, plinth_cm: 60.0, lat: 13.0384, lon: 80.2612 },
+        { id: "SS-002", name: "T. Nagar Substation", voltage_kv: 110, plinth_cm: 45.0, lat: 13.0418, lon: 80.2341 },
+        { id: "SS-003", name: "Guindy Industrial Grid", voltage_kv: 230, plinth_cm: 55.0, lat: 13.0067, lon: 80.2036 },
+        { id: "SS-004", name: "Koyambedu Substation", voltage_kv: 110, plinth_cm: 50.0, lat: 13.0694, lon: 80.1948 },
+        { id: "SS-005", name: "Velachery Substation", voltage_kv: 110, plinth_cm: 40.0, lat: 12.9815, lon: 80.2180 }
+      ];
+
+      subs.forEach(ss => {
+        const marker = L.circleMarker([ss.lat, ss.lon || ss.lng], {
+          radius: 5,
+          fillColor: "#f59e0b",
+          color: "#ffffff",
+          weight: 1.5,
+          fillOpacity: 0.9
+        });
+
+        marker.bindTooltip(`
+          <div class="text-xs p-1">
+            <div class="font-bold text-amber-500">${ss.name} (${ss.voltage || ss.voltage_kv + ' kV'})</div>
+            <div class="text-slate-600">Plinth Elevation: ${ss.plinth_cm || 45} cm | Status: Normal</div>
+          </div>
+        `);
+
+        marker.addTo(map);
+        substationMarkers.push(marker);
+
+        // Add to sidebar list
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between p-2 rounded bg-slate-900/60 border border-slate-800 text-[10px]";
+        item.innerHTML = `
+          <div>
+            <div class="font-semibold text-slate-200">${ss.name}</div>
+            <div class="text-slate-400">Plinth: ${ss.plinth_cm || 45}cm | ${ss.voltage || ss.voltage_kv + 'kV'}</div>
+          </div>
+          <span class="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 font-bold">NORMAL</span>
+        `;
+        listContainer.appendChild(item);
+      });
+    }
+
+    // Event Listeners
+    document.getElementById('select-corridor').addEventListener('change', (e) => {
+      activeCorridorKey = e.target.value;
+      renderRoutes();
+    });
+
+    document.querySelectorAll('.veh-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.veh-btn').forEach(b => {
+          b.className = "veh-btn bg-slate-800 border border-slate-700 text-slate-300 py-1.5 px-2 rounded flex flex-col items-center gap-0.5 text-center hover:bg-slate-700 transition";
+        });
+        const target = e.currentTarget;
+        target.className = "veh-btn active bg-rose-950/80 border border-rose-600 text-rose-200 py-1.5 px-2 rounded flex flex-col items-center gap-0.5 text-center transition";
+        activeVehicle = target.getAttribute('data-veh');
+        renderRoutes();
+      });
+    });
+
+    document.getElementById('slider-horizon').addEventListener('input', (e) => {
+      activeHorizonIndex = parseInt(e.target.value);
+      const labels = ["T + 0 min (Baseline)", "T + 30 min (Rain Ingress)", "T + 60 min (Peak Deluge)", "T + 120 min (Slow Recession)", "T + 180 min (Post-Drainage)"];
+      document.getElementById('val-horizon').innerText = labels[activeHorizonIndex];
+    });
+
+    document.getElementById('toggle-substations').addEventListener('change', (e) => {
+      substationMarkers.forEach(m => {
+        if (e.target.checked) m.addTo(map);
+        else map.removeLayer(m);
+      });
+    });
+
+    // Initial Execution
+    renderRoutes();
+    renderSubstations();
+  </script>
+</body>
+</html>

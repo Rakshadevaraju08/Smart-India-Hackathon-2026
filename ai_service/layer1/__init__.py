@@ -1,8 +1,9 @@
-"""Layer 1: 2D Micro-Topographical DEM & Runoff Topography Engine (GCC / MoES 26085).
+"""Layer 1: 2D Micro-Topographical DEM, LULC & Runoff Engine (GCC / MoES 26085).
 
 Authoritative public API for ISRO Cartosat-1 ingestion, UTM Zone 44N reprojection,
 InSAR coastal subsidence calibration, hydro-conditioning (canal stream burning & underpasses),
-hydraulic derivative calculation (slope, aspect, D8 flow), and street-level elevation sampling.
+hydraulic derivative calculation (slope, aspect, D8 flow), street-level elevation sampling,
+and LULC / soil infiltration surface runoff generation.
 """
 
 from typing import TYPE_CHECKING, Any
@@ -16,6 +17,12 @@ from .dem_builder import (
 from .hydro_conditioner import HydroConditioner
 from .hydrologic_derivatives import HydrologicDerivatives
 from .road_sampler import RoadElevationSampler
+from .lulc import (
+    ImperviousExtractor,
+    SoilHydrologyModel,
+    SurfaceRunoffGenerator,
+    RunoffResult,
+)
 
 if TYPE_CHECKING:
     from .pipeline import Layer1Pipeline, Layer1Result
@@ -25,6 +32,10 @@ __all__ = [
     "HydroConditioner",
     "HydrologicDerivatives",
     "RoadElevationSampler",
+    "ImperviousExtractor",
+    "SoilHydrologyModel",
+    "SurfaceRunoffGenerator",
+    "RunoffResult",
     "Layer1Pipeline",
     "Layer1Result",
     "DEFAULT_CHENNAI_BOUNDS_WGS84",

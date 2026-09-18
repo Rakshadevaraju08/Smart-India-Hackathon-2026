@@ -13,9 +13,11 @@ import unittest
 from pathlib import Path
 import numpy as np
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+if str(PROJECT_ROOT / "ai_service") not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT / "ai_service"))
 
 try:
     from ai_service.layer0.cml_ingestor import CMLLink, CMLPrecipitationEngine, CHENNAI_CML_TOPOLOGY

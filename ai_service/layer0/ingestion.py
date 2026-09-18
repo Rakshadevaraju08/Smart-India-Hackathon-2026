@@ -213,13 +213,14 @@ class IMDRadarIngestion:
         return None
 
     def fetch_latest_radar(self, product: str = 'sri', station: str = 'Chennai',
-                           fallback_scenario: str = 'michaung') -> RadarSweep:
+                           fallback_scenario: str = 'michaung',
+                           allow_clear_air: bool = False) -> RadarSweep:
         """Fetch latest live radar sweep or seamlessly fallback to archive if unavailable."""
         gif_bytes = self.fetch_live_gif(product=product)
         if gif_bytes:
             try:
                 img = Image.open(io.BytesIO(gif_bytes))
-                if self.is_valid_radar_sweep(img):
+                if self.is_valid_radar_sweep(img, allow_clear_air=allow_clear_air):
                     if product.lower() in ('maxz', 'caz'):
                         raw = self.decode_maxz_palette(img)
                     else:
@@ -233,7 +234,7 @@ class IMDRadarIngestion:
                         bounds=DEFAULT_CHENNAI_BOUNDS,
                         timestamp=datetime.now(timezone.utc),
                         gauges=gauges,
-                        metadata={'source': 'live_imd_mausam', 'product': product},
+                        metadata={'source': 'live_imd_mausam', 'product': product, 'is_live': True},
                     )
             except Exception as ex:
                 logger.warning("Error decoding live radar sweep: %s", ex)
@@ -242,12 +243,16 @@ class IMDRadarIngestion:
         return loader.generate_scenario_sweep(scenario=fallback_scenario, sweep_offset_min=0)
 
 
-    def is_valid_radar_sweep(self, img: Image.Image) -> bool:
+    def is_valid_radar_sweep(self, img: Image.Image, allow_clear_air: bool = False) -> bool:
         """Validate if the fetched image is an authentic radar sweep, not a maintenance photo."""
         arr = np.array(img.convert('RGB'))
         h, w, _ = arr.shape
         if h < 400 or w < 400:
             return False
+
+        # If clear air is permitted (e.g. forced live mode), accept any valid dimension radar sweep
+        if allow_clear_air:
+            return True
 
         # In authentic IMD sweeps, radar center is circular. Check if the center area has standard colors.
         cy, cx = h // 2, min(w // 2, h // 2)
@@ -261,12 +266,12 @@ class IMDRadarIngestion:
         if sweep_pixels.size == 0:
             return False
 
-        # Check color match with palette
+        # Check color match with palette (allow localized rain cells > 0.5% coverage)
         sample = sweep_pixels[::100]
         diffs = np.linalg.norm(sample[:, None, :] - self._sri_rgbs[None, :, :], axis=2)
         min_diff = np.min(diffs, axis=1)
         match_pct = np.mean(min_diff < 35.0)
-        return bool(match_pct > 0.40)
+        return bool(match_pct > 0.005)
 
     def decode_sri_palette(self, img: Union[Image.Image, np.ndarray]) -> np.ndarray:
         """Decode 15-bin SRI GIF palette into continuous rain rate (mm/hr)."""
@@ -414,47 +419,69 @@ class IMDAWSIngestion:
 class HistoricalArchiveLoader:
     """Seamless offline archive loader for historical storm events (GPM NetCDF, ERA5, 2015 floods, Michaung)."""
 
-    def __init__(self, archive_zip_path: Optional[str] = None):
+    def __init__(self, archive_zip_path: Optional[Union[str, Path]] = None):
+        base_dir = Path(__file__).resolve().parents[2]
         candidates = [
             archive_zip_path,
+            base_dir / "Datasets" / "01_Rainfall_Yashwanth" / "rainfall_data",
+            base_dir / "Datasets" / "01_Rainfall_Yashwanth" / "rainfall_data.zip",
+            base_dir / "Datasets" / "rainfall_data.zip",
             "Google_Drive_Datasets/01_Rainfall_Yashwanth/rainfall_data.zip",
-            "Datasets/rainfall_data.zip",
-            os.path.join(os.path.dirname(__file__), "../../../Google_Drive_Datasets/01_Rainfall_Yashwanth/rainfall_data.zip"),
         ]
         self.zip_path: Optional[Path] = None
+        self.dir_path: Optional[Path] = None
         for c in candidates:
-            if c and Path(c).is_file():
-                self.zip_path = Path(c)
+            if not c:
+                continue
+            p = Path(c)
+            if p.is_dir():
+                self.dir_path = p
+                break
+            elif p.is_file():
+                self.zip_path = p
                 break
 
     def load_2015_daily_csv(self) -> pd.DataFrame:
         """Load IMD daily rainfall ground truth observations for Oct-Dec 2015 (92 records)."""
+        if self.dir_path:
+            csv_p = self.dir_path / "imd" / "chennai_rainfall_oct_dec_2015.csv"
+            if csv_p.exists():
+                return pd.read_csv(csv_p)
         if self.zip_path:
             with zipfile.ZipFile(self.zip_path, 'r') as z:
                 data = z.read('rainfall_data/imd/chennai_rainfall_oct_dec_2015.csv')
                 df = pd.read_csv(io.BytesIO(data))
                 return df
-        raise FileNotFoundError("Local rainfall archive zip not found.")
+        raise FileNotFoundError("Local rainfall archive not found.")
 
     def load_gpm_sample(self) -> Tuple[np.ndarray, Tuple[float, float, float, float]]:
         """Read sample GPM IMERG .nc4 granule from the offline archive using rasterio."""
         import rasterio
-        if not self.zip_path:
-            raise FileNotFoundError("Local rainfall archive zip not found.")
+        nc4_file = None
+        tmp_name = None
+        if self.dir_path:
+            gpm_dir = self.dir_path / "satellite" / "GPM_IMERG_2015"
+            nc4_candidates = sorted(list(gpm_dir.rglob("*.nc4")))
+            if nc4_candidates:
+                nc4_file = str(nc4_candidates[0])
+        elif self.zip_path:
+            with zipfile.ZipFile(self.zip_path, 'r') as z:
+                data = z.read('rainfall_data/satellite/GPM_IMERG_2015/test_gpm.nc4')
+                with tempfile.NamedTemporaryFile(suffix='.nc4', delete=False) as f:
+                    f.write(data)
+                    tmp_name = f.name
+                    nc4_file = tmp_name
 
-        with zipfile.ZipFile(self.zip_path, 'r') as z:
-            data = z.read('rainfall_data/satellite/GPM_IMERG_2015/test_gpm.nc4')
-            with tempfile.NamedTemporaryFile(suffix='.nc4', delete=False) as f:
-                f.write(data)
-                tmp_name = f.name
+        if not nc4_file:
+            raise FileNotFoundError("Local rainfall archive GPM granule not found.")
 
         try:
-            with rasterio.open(tmp_name) as ds:
+            with rasterio.open(nc4_file) as ds:
                 arr = ds.read(1).astype(np.float32)
                 bounds = (79.9, 12.8, 80.5, 13.3)
                 return arr, bounds
         finally:
-            if os.path.exists(tmp_name):
+            if tmp_name and os.path.exists(tmp_name):
                 os.remove(tmp_name)
 
     def generate_scenario_sweep(self, scenario: str = 'michaung',

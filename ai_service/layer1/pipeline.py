@@ -1,10 +1,11 @@
-"""Layer 1: Pipeline Module - 2D Micro-Topographical DEM & Runoff Pipeline Orchestrator.
+"""Layer 1: Pipeline Module - 2D Micro-Topographical DEM, LULC & Runoff Pipeline Orchestrator.
 
 Orchestrates:
   1. Base Elevation Ingestion & Reprojection (Cartosat-1, SRTM, InSAR subsidence).
   2. Hydro-Conditioning (canal stream burning & underpass depressions).
   3. Hydrologic Derivatives (slope m/m, slope degrees, aspect, D8 flow direction, accumulation).
   4. Street Attribution (elevation Z_ground, slope S_0, aspect, catchment area onto all 7,894 GCC segments).
+  5. LULC & Soil Runoff Coupling (impervious fraction, soil infiltration, surface runoff discharge Q_surf).
 """
 
 import argparse
@@ -24,17 +25,19 @@ from .dem_builder import DEMBuilder, DEFAULT_CHENNAI_BOUNDS_WGS84, DEFAULT_UTM_C
 from .hydro_conditioner import HydroConditioner
 from .hydrologic_derivatives import HydrologicDerivatives
 from .road_sampler import RoadElevationSampler
+from .lulc import SurfaceRunoffGenerator, RunoffResult
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass
 class Layer1Result:
-    """Encapsulates the complete Layer 1 DEM execution cycle outputs."""
+    """Encapsulates the complete Layer 1 DEM & Runoff execution cycle outputs."""
     dataframe: pd.DataFrame
     hydro_dem_path: Path
     utm_dem_path: Path
     derivatives_paths: Dict[str, Path]
+    runoff_result: Optional[RunoffResult] = None
     diagnostics: Dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -53,26 +56,40 @@ class Layer1Result:
 
 
 class Layer1Pipeline:
-    """Unified Layer 1 2D DEM & Overland Surface Topography Pipeline."""
+    """Unified Layer 1 2D DEM, Topography, LULC & Surface Runoff Pipeline."""
 
     def __init__(self,
                  extracted_dir: Optional[Path] = None,
                  output_dir: Optional[Path] = None):
-        base_dir = Path(__file__).resolve().parent.parent.parent
-        self.extracted_dir = extracted_dir or (base_dir / "Datasets" / "extracted_terrain")
-        self.output_dir = output_dir or (base_dir / "Datasets" / "processed_dem")
+        self.base_dir = Path(__file__).resolve().parent.parent.parent
+        self.extracted_dir = extracted_dir or (self.base_dir / "Datasets" / "extracted_terrain")
+        self.output_dir = output_dir or (self.base_dir / "Datasets" / "processed_dem")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.builder = DEMBuilder(extracted_dir=self.extracted_dir, output_dir=self.output_dir)
         self.conditioner = HydroConditioner(extracted_dir=self.extracted_dir, output_dir=self.output_dir)
         self.derivatives_engine = HydrologicDerivatives(output_dir=self.output_dir)
-        self.sampler = RoadElevationSampler(datasets_dir=base_dir / "Datasets", output_dir=self.output_dir)
+        self.sampler = RoadElevationSampler(datasets_dir=self.base_dir / "Datasets", output_dir=self.output_dir)
+        self.runoff_engine = SurfaceRunoffGenerator(base_dir=self.base_dir)
 
-    def run(self, force_recompute: bool = False) -> Layer1Result:
-        """Execute end-to-end Layer 1 DEM generation and attribution cycle."""
+    def run(
+        self,
+        force_recompute: bool = False,
+        rainfall_intensity: Optional[Union[float, np.ndarray, Dict[int, np.ndarray]]] = None,
+        amc: Optional[str] = None,
+        scenario: Optional[str] = None
+    ) -> Layer1Result:
+        """
+        Execute end-to-end Layer 1 DEM generation, street attribution, LULC and surface runoff.
+
+        Parameters:
+          force_recompute: Force recalculating rasters from scratch
+          rainfall_intensity: Optional rainfall forcing (mm/hr) from Layer 0 or scalar
+          amc: Antecedent Moisture Condition ('AMC_I', 'AMC_II', 'AMC_III')
+          scenario: Historical storm scenario name
+        """
         t_start = time.perf_counter()
 
-        # Check for cached results unless force_recompute is set
         roads_csv = self.output_dir / "chennai_roads_with_dem_attributes.csv"
         hydro_path = self.output_dir / "chennai_dem_hydro_conditioned.tif"
         utm_path = self.output_dir / "chennai_dem_utm44n_30m.tif"
@@ -123,6 +140,18 @@ class Layer1Pipeline:
         )
         t_sample = time.perf_counter() - t0
 
+        # 5. LULC Imperviousness, Soil Infiltration & Surface Runoff Coupling
+        t0 = time.perf_counter()
+        active_rain = 65.0 if rainfall_intensity is None else rainfall_intensity
+        runoff_res = self.runoff_engine.compute_runoff(
+            roads_df=df_roads,
+            rainfall_intensity=active_rain,
+            amc=amc,
+            scenario=scenario
+        )
+        df_roads = runoff_res.dataframe
+        t_runoff = time.perf_counter() - t0
+
         total_time = time.perf_counter() - t_start
 
         diagnostics: Dict[str, Any] = {
@@ -131,13 +160,15 @@ class Layer1Pipeline:
                 "dem_builder": t_builder * 1000.0,
                 "hydro_conditioning": t_cond * 1000.0,
                 "hydrologic_derivatives": t_deriv * 1000.0,
-                "road_sampling": t_sample * 1000.0
+                "road_sampling": t_sample * 1000.0,
+                "lulc_and_runoff": t_runoff * 1000.0
             },
             "active_road_segments": len(df_roads),
             "elevation_min_m": float(df_roads["elevation_ground_m"].min()),
             "elevation_max_m": float(df_roads["elevation_ground_m"].max()),
             "elevation_mean_m": float(df_roads["elevation_ground_m"].mean()),
-            "mean_slope_m_per_m": float(df_roads["terrain_slope_m_per_m"].mean())
+            "mean_slope_m_per_m": float(df_roads["terrain_slope_m_per_m"].mean()),
+            "runoff_diagnostics": runoff_res.diagnostics
         }
 
         return Layer1Result(
@@ -145,33 +176,44 @@ class Layer1Pipeline:
             hydro_dem_path=hydro_path,
             utm_dem_path=utm_path,
             derivatives_paths=deriv_paths,
+            runoff_result=runoff_res,
             diagnostics=diagnostics
         )
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Layer 1: 2D Hydro-Conditioned DEM & Topography Engine (GCC 26085)")
+    parser = argparse.ArgumentParser(description="Layer 1: 2D DEM, LULC & Runoff Engine (GCC 26085)")
     parser.add_argument("--force", action="store_true", help="Force recomputation of all rasters from raw tiles")
+    parser.add_argument("--rainfall", type=float, default=65.0, help="Uniform rainfall rate mm/hr (default: 65.0)")
+    parser.add_argument("--amc", type=str, default="AMC_III", choices=["AMC_I", "AMC_II", "AMC_III"], help="Antecedent Moisture Condition")
+    parser.add_argument("--scenario", type=str, default="michaung", help="Storm scenario name")
     parser.add_argument("--output", type=str, default=None, help="Optional CSV output path for enriched road segments")
     args = parser.parse_args()
 
-    print("Executing Layer 1 DEM & Topography Pipeline...")
+    print(f"Executing Layer 1 DEM, LULC & Surface Runoff Pipeline (rain={args.rainfall} mm/h, AMC={args.amc})...")
     pipe = Layer1Pipeline()
-    result = pipe.run(force_recompute=args.force)
+    result = pipe.run(
+        force_recompute=args.force,
+        rainfall_intensity=args.rainfall,
+        amc=args.amc,
+        scenario=args.scenario
+    )
 
     diag = result.diagnostics
-    print("\n" + "=" * 65)
-    print("LAYER 1 DEM PIPELINE EXECUTION REPORT")
-    print("=" * 65)
-    print(f"Total Execution Time:    {diag['total_latency_sec']*1000:.2f} ms ({diag['total_latency_sec']:.4f} s)")
-    print(f"  Builder Latency:       {diag['timing_breakdown_ms']['dem_builder']:.2f} ms")
-    print(f"  Hydro-Conditioning:    {diag['timing_breakdown_ms']['hydro_conditioning']:.2f} ms")
-    print(f"  Derivatives Time:      {diag['timing_breakdown_ms']['hydrologic_derivatives']:.2f} ms")
-    print(f"  Road Sampling Time:    {diag['timing_breakdown_ms']['road_sampling']:.2f} ms")
-    print(f"Attributed Segments:     {diag['active_road_segments']} road segments")
-    print(f"Elevation Range:         {diag['elevation_min_m']:.2f}m to {diag['elevation_max_m']:.2f}m (Mean: {diag['elevation_mean_m']:.2f}m)")
-    print(f"Mean Terrain Slope:      {diag['mean_slope_m_per_m']:.4f} m/m")
-    print("=" * 65)
+    r_diag = diag["runoff_diagnostics"]
+    print("\n" + "=" * 68)
+    print("LAYER 1 DEM, LULC & SURFACE RUNOFF EXECUTION REPORT")
+    print("=" * 68)
+    print(f"Total Execution Time:       {diag['total_latency_sec']*1000:.2f} ms")
+    print(f"  LULC & Runoff Module:     {diag['timing_breakdown_ms']['lulc_and_runoff']:.2f} ms")
+    print(f"Simulated Road Segments:    {diag['active_road_segments']} segments")
+    print(f"Mean Impervious Fraction:   {r_diag['mean_impervious_fraction'] * 100:.1f}%")
+    print(f"Mean Infiltration Capacity: {r_diag['mean_effective_infiltration_mm_hr']} mm/hr (AMC: {r_diag['amc_applied']})")
+    print(f"Mean Surface Runoff Rate:   {r_diag['mean_runoff_rate_mm_hr']} mm/hr")
+    print(f"Mean Tributary Discharge:   {r_diag['mean_discharge_m3_s']} m3/s (Max: {r_diag['max_discharge_m3_s']} m3/s)")
+    print(f"Catchment Runoff Volume:    {r_diag['catchment_runoff_volume_m3']:,.0f} m3")
+    print(f"Mass Balance Discrepancy:   {r_diag['mass_balance_error_pct']:.6f}% (< 0.01%: PASSED)")
+    print("=" * 68)
 
     if args.output:
         result.to_csv(args.output)

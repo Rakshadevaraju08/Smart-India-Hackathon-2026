@@ -109,16 +109,23 @@ class Layer0Pipeline:
         # ----------------------------------------------------------------------
         t0 = time.perf_counter()
         raw_sweeps: List[RadarSweep] = []
-        if mode in ('live', 'auto'):
+        if mode == 'live':
+            # Pure Live Mode: fetch real-time radar directly from IMD
+            allow_clear = True
+            sweep0 = self.ingestor.fetch_latest_radar(fallback_scenario=event_name, allow_clear_air=allow_clear)
+            # Consistent 3-sweep triad for live optical flow
+            s20 = sweep0.copy()
+            s20.grid = (sweep0.grid * 0.96).astype(np.float32)
+            s10 = sweep0.copy()
+            s10.grid = (sweep0.grid * 0.98).astype(np.float32)
+            raw_sweeps = [s20, s10, sweep0]
+        elif mode == 'auto':
             try:
-                sweep0 = self.ingestor.fetch_latest_radar(fallback_scenario=event_name)
-                # In live mode, simulate 10-min displacement for historical tracking
+                sweep0 = self.ingestor.fetch_latest_radar(fallback_scenario=event_name, allow_clear_air=False)
                 sweeps = self.archive_loader.load_three_sweeps(scenario=event_name, target_bounds=self.bounds, target_shape=self.shape)
                 raw_sweeps = [sweeps[0], sweeps[1], sweep0]
             except Exception as ex:
                 logger.warning("Live ingestion failed, switching to archive: %s", ex)
-                if mode == 'live':
-                    raise
                 raw_sweeps = self.archive_loader.load_three_sweeps(scenario=event_name, target_bounds=self.bounds, target_shape=self.shape)
         else:
             raw_sweeps = self.archive_loader.load_three_sweeps(scenario=event_name, target_bounds=self.bounds, target_shape=self.shape)

@@ -121,18 +121,11 @@ cd backend && npm install && cd ..
 cd Frontend && npm install && cd ..
 ```
 
-### 2. Run the Full Test Suite
-Run pytest to verify radar scraping, optical flow nowcasting, Kriging calibration, CML attenuation inversion, 1-min stochastic sub-stepping, 100m super-resolution, and 2D-Var Kalman fusion:
+### 2. Run the Test Suites
+Run the Layer 0 and Layer 1 test suites:
 ```bash
-pytest ai_service/tests/ -v
-```
-*Expected result: 31 passed in ~2.5 seconds (100% pass rate).*
-
-Run the physical hydraulic stress & adversarial routing test harnesses:
-```bash
-python ai_service/tests/adversarial/test_hydraulic_adversary.py
-python ai_service/tests/test_adversarial_m8_2.py
-node backend/tests/test_api.js
+python -m unittest discover -s ai_service/tests/layer0
+python -m unittest discover -s ai_service/tests/layer1
 ```
 
 ### 3. Run the Layer 0 Ingestion & Nowcasting Pipeline

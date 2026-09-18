@@ -1,0 +1,93 @@
+@import "tailwindcss";
+
+@theme {
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-cyan-400: #22d3ee;
+  --color-cyan-500: #06b6d4;
+  --color-red-500: #ef4444;
+  --color-orange-500: #f97316;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-slate-900);
+  color: white;
+}
+
+/* Hydraulic Fountain Geyser Animations from hydraulics_viewer.html / index.html */
+@keyframes fountain-wave-1 {
+  0% { transform: scale(0.3); opacity: 0.95; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+@keyframes fountain-wave-2 {
+  0% { transform: scale(0.3); opacity: 0.95; }
+  100% { transform: scale(3.4); opacity: 0; }
+}
+@keyframes fountain-wave-3 {
+  0% { transform: scale(0.3); opacity: 0.85; }
+  100% { transform: scale(4.4); opacity: 0; }
+}
+@keyframes fountain-geyser {
+  0%, 100% { transform: scale(0.9); box-shadow: 0 0 6px #ff1a40; }
+  50% { transform: scale(1.2); box-shadow: 0 0 16px #ff1a40; }
+}
+
+.fountain-manhole {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  cursor: pointer;
+}
+.fountain-manhole .wave {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 30, 60, 0.9);
+  background: rgba(255, 30, 60, 0.2);
+  pointer-events: none;
+}
+.fountain-manhole .wave-1 { animation: fountain-wave-1 1.8s cubic-bezier(0.1, 0.7, 0.3, 1) infinite; }
+.fountain-manhole .wave-2 { animation: fountain-wave-2 1.8s cubic-bezier(0.1, 0.7, 0.3, 1) infinite 0.6s; }
+.fountain-manhole .wave-3 { animation: fountain-wave-3 1.8s cubic-bezier(0.1, 0.7, 0.3, 1) infinite 1.2s; }
+.fountain-manhole .core {
+  position: absolute;
+  top: 3px; left: 3px; width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #ff1a40;
+  border: 2px solid #ffffff;
+  animation: fountain-geyser 1.2s ease-in-out infinite;
+  z-index: 2;
+  box-shadow: 0 0 10px #ff1a40;
+}
+
+/* Substation Hazard Pulse from routing_viewer.html */
+@keyframes plinth-hazard-pulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px #ff3b30); }
+  50% { transform: scale(1.15); filter: drop-shadow(0 0 12px #ff0055); }
+}
+.substation-critical {
+  animation: plinth-hazard-pulse 1.4s infinite ease-in-out;
+}
+
+/* Emergency Route Animations */
+@keyframes safe-route-pulse {
+  0%, 100% { filter: drop-shadow(0 0 4px #10b981) drop-shadow(0 0 10px #059669); }
+  50% { filter: drop-shadow(0 0 10px #10b981) drop-shadow(0 0 20px #34d399); }
+}
+.route-safe-glow {
+  animation: safe-route-pulse 2s infinite ease-in-out;
+}
+
+@keyframes hazard-route-pulse {
+  0%, 100% { filter: drop-shadow(0 0 4px #ef4444) drop-shadow(0 0 10px #b91c1c); }
+  50% { filter: drop-shadow(0 0 10px #ff1a40) drop-shadow(0 0 22px #ff0033); }
+}
+.route-hazard-glow {
+  animation: hazard-route-pulse 1.4s infinite ease-in-out;
+}

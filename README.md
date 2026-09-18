@@ -5,7 +5,7 @@
 [![Python 3.13+](https://img.shields.io/badge/Python-3.13%2B-green.svg)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
 [![Web GIS](https://img.shields.io/badge/Frontend-Leaflet%20Web%20GIS-199900.svg)](https://leafletjs.com/)
-[![Tests](https://img.shields.io/badge/Tests-25%2F25%20Passing-brightgreen.svg)](tests/test_layer0_rainfall.py)
+[![Tests](https://img.shields.io/badge/Tests-31%2F31%20Passing-brightgreen.svg)](ai_service/tests/test_layer0_rainfall.py)
 
 A physics-coupled 1D-2D hydro-meteorological nowcasting engine that predicts street-level urban inundation (0-3 hour lead time) for Greater Chennai Corporation (GCC - 7,894 road segments, 15 zones) by coupling Doppler Weather Radar nowcasts, 2D micro-topography, and 1D subsurface stormwater drainage graph hydraulics.
 
@@ -98,38 +98,62 @@ SIH/
 
 ## Quick Start & Verification
 
-### 1. Environment Installation
-Clone the repository and install dependencies:
-`powershell
-git clone https://github.com/Team-Kairos-SIH/Smart-India-Hackathon-2026.git
-cd Smart-India-Hackathon-2026
-pip install -r requirements.txt
-`
+### 1. 1-Click Dependency Installation (All-in-One)
+On Windows:
+```cmd
+install_dependencies.bat
+```
+On Linux / macOS / WSL:
+```bash
+bash install_dependencies.sh
+```
+*This automatically installs Python requirements (`pip install -r requirements.txt`), Node.js backend modules (`backend/`), and React/Vite Frontend packages (`Frontend/`).*
 
-### 2. Run the Full Layer 0 Test Suite (31 Tests)
-Run pytest to verify radar scraping, PySteps optical flow nowcasting, Kriging bias calibration, CML cell tower inversion, 1-minute stochastic sub-stepping, 100m super-resolution, and 2D-Var Kalman fusion:
-```powershell
-pytest tests/ -v
+#### Manual Installation (Alternative):
+```bash
+# 1. Python Environment
+python -m pip install -r requirements.txt
+
+# 2. Node.js API Gateway Backend
+cd backend && npm install && cd ..
+
+# 3. React / Vite Frontend
+cd Frontend && npm install && cd ..
+```
+
+### 2. Run the Full Test Suite
+Run pytest to verify radar scraping, optical flow nowcasting, Kriging calibration, CML attenuation inversion, 1-min stochastic sub-stepping, 100m super-resolution, and 2D-Var Kalman fusion:
+```bash
+pytest ai_service/tests/ -v
 ```
 *Expected result: 31 passed in ~2.5 seconds (100% pass rate).*
 
-### 3. Run the Standalone Layer 0 Pipeline
+Run the physical hydraulic stress & adversarial routing test harnesses:
+```bash
+python ai_service/tests/adversarial/test_hydraulic_adversary.py
+python ai_service/tests/test_adversarial_m8_2.py
+node backend/tests/test_api.js
+```
+
+### 3. Run the Layer 0 Ingestion & Nowcasting Pipeline
 Execute the complete rainfall ingestion and nowcasting engine:
-```powershell
-python -m src.layer0.pipeline
+```bash
+python -m ai_service.layer0.pipeline
 ```
 This fetches live IMD radar grids, fuses 35 GCC municipal ward gauges and cellular microwave links (CML), runs optical flow cloud nowcasting, and generates mass-conserved rainfall vectors for all 7,894 streets in Chennai.
 
-### 4. Launch the Tactical Command Twin (1-Click)
-Double-click launch_dashboard.bat or run:
-```powershell
-.\launch_dashboard.bat
-```
-This starts the backend API on port 8000 and opens the Web GIS Command Twin in your browser:
-- **0-180 Min Nowcast Slider**: Scrub forward in time to watch inundation develop street-by-street.
-- **Surcharge Diagnostic Inspector**: Click any road or manhole to inspect nominal diameter, hydraulic head, and backflow rate.
-- **Dynamic Clogging Simulator**: Slide solid waste blockage (mu_clog) from 0% to 80% to observe the real-world impact of uncleaned drains.
-- **A* Emergency Routing**: Switch vehicle types (108 Ambulance, NDRF truck, passenger car, two-wheeler) to calculate safe flood-avoidance routes.
+### 4. Launch the System
+- **1-Click System Launcher (Node API + Dashboard)**:
+  ```bash
+  bash launch_system.sh
+  ```
+- **Windows 1-Click Standalone Viewer**:
+  Double-click `launch_dashboard.bat` to instantly launch the Tactical Command Twin in your default browser.
+- **Vite Interactive React Dashboard (Dev Mode)**:
+  ```bash
+  cd Frontend
+  npm run dev
+  ```
 
 ---
 

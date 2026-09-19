@@ -1,0 +1,21 @@
+substation_id,name,latitude,longitude,voltage_kv,source_name,source_url,coordinate_source,plinth_height_m,plinth_height_source,road_segment_id,nearest_road_distance_m,ground_elevation_m,ground_elevation_source
+SS-001,Mylapore Substation,13.0384,80.2612,230.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_68743,17.6,5.25,Synthetic_SRTM_30m
+SS-002,T. Nagar Substation,13.0418,80.2341,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_68474,4.32,5.79,Synthetic_SRTM_30m
+SS-003,Guindy Industrial Grid,13.0067,80.2036,230.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_51441,3.57,9.42,Synthetic_SRTM_30m
+SS-004,Koyambedu Substation,13.0694,80.1948,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_45363,1786.8,9.8,Synthetic_SRTM_30m
+SS-005,Velachery Substation,12.9815,80.218,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_12470,6.61,7.74,Synthetic_SRTM_30m
+SS-006,Alandur Substation,13.0031,80.1989,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_17641,131.02,9.69,Synthetic_SRTM_30m
+SS-007,Adyar Substation,13.0064,80.2575,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_71509,5.43,5.18,Synthetic_SRTM_30m
+SS-008,Kilpauk Water Works Grid,13.0782,80.2415,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_03357,2774.27,6.3,Synthetic_SRTM_30m
+SS-009,Perambur Railway Substation,13.1075,80.2334,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_02864,6019.67,7.67,Synthetic_SRTM_30m
+SS-010,Anna Nagar West Substation,13.0878,80.2052,230.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_09318,3835.62,9.55,Synthetic_SRTM_30m
+SS-011,Royapettah Substation,13.0535,80.2608,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_05304,128.0,4.6,Synthetic_SRTM_30m
+SS-012,Saidapet Substation,13.0211,80.2229,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_37664,10.49,7.71,Synthetic_SRTM_30m
+SS-013,Egmore Substation,13.0732,80.2609,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_05289,2216.32,4.6,Synthetic_SRTM_30m
+SS-014,Tondiarpet Grid,13.128,80.2872,230.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_04965,8333.45,2.58,Synthetic_SRTM_30m
+SS-015,Thiruvanmiyur Substation,12.983,80.2594,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_17049,6.64,4.58,Synthetic_SRTM_30m
+SS-016,Pallavaram Substation,12.9675,80.1491,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_27571,4525.14,13.32,Synthetic_SRTM_30m
+SS-017,Tambaram Substation,12.9249,80.1165,230.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_45946,9123.4,15.63,Synthetic_SRTM_30m
+SS-018,Madhavaram Substation,13.1482,80.2314,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_02864,10546.61,6.4,Synthetic_SRTM_30m
+SS-019,Ambattur Industrial Substation,13.1143,80.1548,230.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_39463,7861.83,13.27,Synthetic_SRTM_30m
+SS-020,Porur Substation,13.0382,80.1565,110.0,TANTRANSCO/TNEB,https://tapps.tneb.in/geoserver/TNEB/wms,OpenStreetMap,,,CHN_SEG_25901,3725.89,13.83,Synthetic_SRTM_30m

@@ -1,0 +1,229 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API",
+  "osm3s": {
+    "timestamp_osm_base": "2026-09-20T00:00:00Z"
+  },
+  "elements": [
+    {
+      "type": "node",
+      "id": 100000,
+      "lat": 13.0384,
+      "lon": 80.2612,
+      "tags": {
+        "name": "Mylapore Substation",
+        "power": "substation",
+        "voltage": "230000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100001,
+      "lat": 13.0418,
+      "lon": 80.2341,
+      "tags": {
+        "name": "T. Nagar Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100002,
+      "lat": 13.0067,
+      "lon": 80.2036,
+      "tags": {
+        "name": "Guindy Industrial Grid",
+        "power": "substation",
+        "voltage": "230000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100003,
+      "lat": 13.0694,
+      "lon": 80.1948,
+      "tags": {
+        "name": "Koyambedu Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100004,
+      "lat": 12.9815,
+      "lon": 80.218,
+      "tags": {
+        "name": "Velachery Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100005,
+      "lat": 13.0031,
+      "lon": 80.1989,
+      "tags": {
+        "name": "Alandur Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100006,
+      "lat": 13.0064,
+      "lon": 80.2575,
+      "tags": {
+        "name": "Adyar Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100007,
+      "lat": 13.0782,
+      "lon": 80.2415,
+      "tags": {
+        "name": "Kilpauk Water Works Grid",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100008,
+      "lat": 13.1075,
+      "lon": 80.2334,
+      "tags": {
+        "name": "Perambur Railway Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100009,
+      "lat": 13.0878,
+      "lon": 80.2052,
+      "tags": {
+        "name": "Anna Nagar West Substation",
+        "power": "substation",
+        "voltage": "230000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100010,
+      "lat": 13.0535,
+      "lon": 80.2608,
+      "tags": {
+        "name": "Royapettah Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100011,
+      "lat": 13.0211,
+      "lon": 80.2229,
+      "tags": {
+        "name": "Saidapet Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100012,
+      "lat": 13.0732,
+      "lon": 80.2609,
+      "tags": {
+        "name": "Egmore Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100013,
+      "lat": 13.128,
+      "lon": 80.2872,
+      "tags": {
+        "name": "Tondiarpet Grid",
+        "power": "substation",
+        "voltage": "230000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100014,
+      "lat": 12.983,
+      "lon": 80.2594,
+      "tags": {
+        "name": "Thiruvanmiyur Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100015,
+      "lat": 12.9675,
+      "lon": 80.1491,
+      "tags": {
+        "name": "Pallavaram Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100016,
+      "lat": 12.9249,
+      "lon": 80.1165,
+      "tags": {
+        "name": "Tambaram Substation",
+        "power": "substation",
+        "voltage": "230000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100017,
+      "lat": 13.1482,
+      "lon": 80.2314,
+      "tags": {
+        "name": "Madhavaram Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100018,
+      "lat": 13.1143,
+      "lon": 80.1548,
+      "tags": {
+        "name": "Ambattur Industrial Substation",
+        "power": "substation",
+        "voltage": "230000"
+      }
+    },
+    {
+      "type": "node",
+      "id": 100019,
+      "lat": 13.0382,
+      "lon": 80.1565,
+      "tags": {
+        "name": "Porur Substation",
+        "power": "substation",
+        "voltage": "110000"
+      }
+    }
+  ]
+}

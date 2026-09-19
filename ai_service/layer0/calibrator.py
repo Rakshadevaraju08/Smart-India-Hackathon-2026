@@ -35,18 +35,30 @@ class GaugeRadarCalibrator:
         self.max_gain = max_gain
 
     def _extract_stn_arrays(self, gauges: Dict[str, Dict[str, Any]]) -> Tuple[np.ndarray, np.ndarray, List[str]]:
-        """Extract coordinate and rain rate arrays from gauges dictionary."""
+        """Extract coordinate and rain rate arrays from gauges dictionary safely."""
         coords = []
         rates = []
         names = []
         for stn_id, g in gauges.items():
+            if not isinstance(g, dict):
+                continue
             lat = g.get('latitude', g.get('lat'))
             lon = g.get('longitude', g.get('lon'))
             rate = g.get('rainfall_rate_mm_hr', g.get('rain_rate_mmh', g.get('rate', 0.0)))
             if lat is not None and lon is not None:
-                coords.append([float(lat), float(lon)])
-                rates.append(float(rate))
-                names.append(g.get('name', str(stn_id)))
+                try:
+                    f_lat = float(lat)
+                    f_lon = float(lon)
+                    f_rate = float(rate) if rate is not None else 0.0
+                    if not (np.isfinite(f_lat) and np.isfinite(f_lon)):
+                        continue
+                    if not np.isfinite(f_rate) or f_rate < 0:
+                        f_rate = 0.0
+                    coords.append([f_lat, f_lon])
+                    rates.append(f_rate)
+                    names.append(g.get('name', str(stn_id)))
+                except (ValueError, TypeError):
+                    continue
 
         if not coords:
             return np.empty((0, 2), dtype=np.float64), np.empty(0, dtype=np.float64), []
@@ -71,6 +83,7 @@ class GaugeRadarCalibrator:
           diagnostics: Detailed metrics dictionary
         """
         raw_radar = np.nan_to_num(raw_radar, nan=0.0, posinf=500.0, neginf=0.0).astype(np.float32)
+        raw_radar = np.maximum(0.0, raw_radar)
         if method.lower() == 'ked':
             return self.compute_ked_field(raw_radar, gauges, bounds)
         return self.compute_brandes_gain_field(raw_radar, gauges, bounds)
@@ -90,6 +103,7 @@ class GaugeRadarCalibrator:
         Guarantees strictly positive rain rates and smooth spatial continuity.
         """
         raw_radar = np.nan_to_num(raw_radar, nan=0.0, posinf=500.0, neginf=0.0).astype(np.float32)
+        raw_radar = np.maximum(0.0, raw_radar)
         n_lat, n_lon = raw_radar.shape
         min_lon, min_lat, max_lon, max_lat = bounds
         dlat = (max_lat - min_lat) / max(1, n_lat - 1)

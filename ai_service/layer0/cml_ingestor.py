@@ -92,10 +92,14 @@ class CMLPrecipitationEngine:
 
     def invert_link(self, link: CMLLink) -> float:
         """Invert single link attenuation to path-averaged rain rate (mm/hr)."""
+        if not np.isfinite(link.rsl_dbm) or not np.isfinite(link.baseline_dbm):
+            return 0.0
+
         total_attenuation = link.baseline_dbm - link.rsl_dbm
         if total_attenuation <= 0.2:
             return 0.0
 
+        # Physical ceiling on microwave rain attenuation (link drop/outage safety cap)
         rain_attenuation = max(0.0, total_attenuation - self.waa_db)
         if rain_attenuation <= 0.05 or link.length_km <= 0.05:
             return 0.0
@@ -105,7 +109,8 @@ class CMLPrecipitationEngine:
         
         # Inversion formula: R = (k / a)**(1 / b)
         rain_rate = float((specific_k / a) ** (1.0 / b))
-        return round(max(0.0, rain_rate), 2)
+        # Cap at realistic physical maximum cloudburst rate (300 mm/hr) to avoid outage artifact spikes
+        return round(min(300.0, max(0.0, rain_rate)), 2)
 
     def harvest_mesh_telemetry(
         self,

@@ -144,10 +144,10 @@ class StreetDisaggregator:
             d_10m = (r_conserved * (10.0 / 60.0)).astype(np.float32)
 
             # Format columns with both long-form and short-form aliases
-            df_out[f"I_T+{h}m_mm_hr"] = np.round(r_conserved, 3)
-            df_out[f"d_T+{h}m_mm"] = np.round(d_10m, 3)
-            df_out[f"I_t{h:03d}"] = np.round(r_conserved, 3)
-            df_out[f"d_t{h:03d}"] = np.round(d_10m, 3)
+            df_out[f"I_T+{h}m_mm_hr"] = r_conserved
+            df_out[f"d_T+{h}m_mm"] = d_10m
+            df_out[f"I_t{h:03d}"] = r_conserved
+            df_out[f"d_t{h:03d}"] = d_10m
 
         return df_out
 

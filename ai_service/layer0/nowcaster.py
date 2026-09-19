@@ -76,9 +76,9 @@ class StormMotionNowcaster:
             g0  = self._extract_grid(r_curr)
 
         # Handle all-zero or NaN grids
-        g20 = np.nan_to_num(g20, nan=0.0)
-        g10 = np.nan_to_num(g10, nan=0.0)
-        g0  = np.nan_to_num(g0, nan=0.0)
+        g20 = np.nan_to_num(g20, nan=0.0, posinf=500.0, neginf=0.0).astype(np.float32)
+        g10 = np.nan_to_num(g10, nan=0.0, posinf=500.0, neginf=0.0).astype(np.float32)
+        g0  = np.nan_to_num(g0,  nan=0.0, posinf=500.0, neginf=0.0).astype(np.float32)
 
         if np.all(g0 <= 1e-4) and np.all(g10 <= 1e-4):
             # No motion in dry field
@@ -113,6 +113,9 @@ class StormMotionNowcaster:
         u_flow = (self.w_curr * flow_curr[..., 0] + self.w_prev * flow_prev[..., 0]).astype(np.float32)
         v_flow = (self.w_curr * flow_curr[..., 1] + self.w_prev * flow_prev[..., 1]).astype(np.float32)
 
+        u_flow = np.nan_to_num(u_flow, nan=0.0, posinf=50.0, neginf=-50.0).astype(np.float32)
+        v_flow = np.nan_to_num(v_flow, nan=0.0, posinf=50.0, neginf=-50.0).astype(np.float32)
+
         return u_flow, v_flow
 
     # Alias for API compatibility
@@ -137,7 +140,9 @@ class StormMotionNowcaster:
           Dict[int, np.ndarray]: Mapping lead time (min) -> 2D forecast rain raster (mm/hr)
         """
         grid = self._extract_grid(r_curr)
-        grid = np.nan_to_num(grid, nan=0.0)
+        grid = np.nan_to_num(grid, nan=0.0, posinf=500.0, neginf=0.0).astype(np.float32)
+        u_flow = np.nan_to_num(u_flow, nan=0.0, posinf=50.0, neginf=-50.0).astype(np.float32)
+        v_flow = np.nan_to_num(v_flow, nan=0.0, posinf=50.0, neginf=-50.0).astype(np.float32)
         n_lat, n_lon = grid.shape
 
         grid_x, grid_y = np.meshgrid(np.arange(n_lon, dtype=np.float32),

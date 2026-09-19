@@ -155,19 +155,22 @@ def dbz_to_rain_rate(dbz: np.ndarray, a: float = 300.0, b: float = 1.4) -> np.nd
       Z = 300 * R^1.4 (Rosenfeld / Monsoonal Cloudburst)
     Continental Marshall-Palmer can be specified with a=200.0, b=1.6.
     """
-    z_linear = 10.0 ** (np.maximum(0.0, dbz) / 10.0)
+    dbz_clean = np.nan_to_num(dbz, nan=0.0, posinf=65.0, neginf=0.0).astype(np.float32)
+    dbz_clean = np.clip(dbz_clean, 0.0, 65.0)
+    z_linear = 10.0 ** (dbz_clean / 10.0)
     rain_rate = (z_linear / a) ** (1.0 / b)
     # Mask echoes below 15 dBZ or negative to 0 mm/hr
-    rain_rate = np.where(dbz < 15.0, 0.0, rain_rate)
-    return np.maximum(0.0, rain_rate).astype(np.float32)
+    rain_rate = np.where(dbz_clean < 15.0, 0.0, rain_rate)
+    return np.clip(rain_rate, 0.0, 500.0).astype(np.float32)
 
 
 def rain_rate_to_dbz(r: np.ndarray, a: float = 300.0, b: float = 1.4) -> np.ndarray:
     """Convert rain rate (mm/hr) to radar reflectivity (dBZ) via power law Z = a * R^b."""
-    safe_r = np.maximum(1e-4, r)
+    r_clean = np.nan_to_num(r, nan=0.0, posinf=500.0, neginf=0.0).astype(np.float32)
+    safe_r = np.maximum(1e-4, r_clean)
     z_linear = a * (safe_r ** b)
     dbz = 10.0 * np.log10(z_linear)
-    return np.where(r <= 0.01, 0.0, dbz).astype(np.float32)
+    return np.where(r_clean <= 0.01, 0.0, dbz).astype(np.float32)
 
 
 class IMDRadarIngestion:

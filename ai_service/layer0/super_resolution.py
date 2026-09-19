@@ -76,7 +76,7 @@ class TopographicSuperResolutionEngine:
             dem_100m: Optional 2D array (10*H, 10*W) of elevation in meters
             apply_mass_conservation: If True, forces sum(100m) == sum(1km) per parent cell
         """
-        coarse_clean = np.nan_to_num(coarse_grid_1km, nan=0.0).astype(np.float32)
+        coarse_clean = np.nan_to_num(coarse_grid_1km, nan=0.0, posinf=500.0, neginf=0.0).astype(np.float32)
         H, W = coarse_clean.shape
         target_shape = (H * self.scale, W * self.scale)
 

@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KAIROS | Layer 0 Atmospheric Doppler Radar & Optical Flow Nowcasting</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Tactical dark basemap filter */
+    .leaflet-tile {
+      filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+    }
+    /* Pulsing gauge animation */
+    @keyframes gauge-pulse {
+      0%, 100% { transform: scale(1); opacity: 0.9; }
+      50% { transform: scale(1.3); opacity: 0.4; }
+    }
+    .gauge-pulse-ring {
+      animation: gauge-pulse 1.8s infinite ease-in-out;
+    }
+    /* Radar sweep circular animation */
+    @keyframes radar-sweep {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .radar-beam {
+      animation: radar-sweep 4s linear infinite;
+      transform-origin: center center;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden select-none font-sans">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-[#0B1E36] border-b border-[#1E3A5F] px-4 py-2.5 flex items-center justify-between shadow-lg shrink-0 z-30">
+    <div class="flex items-center gap-2.5 flex-wrap">
+      <a href="index.html" class="flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 px-2.5 py-1.5 rounded border border-slate-700 text-sky-400 font-medium transition">
+        <span>&larr;</span> Command Twin
+      </a>
+      <a href="radar_viewer.html" class="flex items-center gap-1.5 text-xs bg-sky-500/20 text-sky-300 px-2.5 py-1.5 rounded border border-sky-500/40 font-bold shadow-sm">
+        <span>📡</span> L0 Radar
+      </a>
+      <a href="dem_viewer.html" class="flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 px-2.5 py-1.5 rounded border border-slate-700 text-emerald-400 font-medium transition">
+        <span>🗺️</span> L1 DEM
+      </a>
+      <a href="hydraulics_viewer.html" class="flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 px-2.5 py-1.5 rounded border border-slate-700 text-cyan-400 font-medium transition">
+        <span>🌊</span> L2 Hydraulics
+      </a>
+      <a href="inundation_viewer.html" class="flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 px-2.5 py-1.5 rounded border border-slate-700 text-amber-400 font-medium transition">
+        <span>⚡</span> L3 Inundation
+      </a>
+      <a href="routing_viewer.html" class="flex items-center gap-1.5 text-xs bg-slate-800/80 hover:bg-slate-700 px-2.5 py-1.5 rounded border border-slate-700 text-rose-400 font-medium transition">
+        <span>🚑</span> L4 Routing
+      </a>
+      <div class="h-4 w-px bg-slate-700 mx-1 hidden sm:block"></div>
+      <div>
+        <h1 class="text-sm font-bold text-sky-300 flex items-center gap-2">
+          <span>📡</span> KAIROS Layer 0: Atmospheric Doppler Radar & Precipitation Nowcasting
+        </h1>
+        <p class="text-[10px] text-slate-400 hidden md:block">IMD Meenambakkam S-Band (10-Min Sweeps) + Farnebäck Semi-Lagrangian Optical Flow + 36 GCC Gauges (KED Biased)</p>
+      </div>
+    </div>
+
+    <!-- Quick Telemetry Chips -->
+    <div class="flex items-center gap-2 text-xs">
+      <div class="bg-slate-900/90 px-2.5 py-1 rounded border border-slate-700 hidden lg:flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-slate-400">Peak Reflectivity:</span>
+        <span id="header-peak-dbz" class="font-bold text-rose-400">54.5 dBZ (Severe)</span>
+      </div>
+      <div class="bg-slate-900/90 px-2.5 py-1 rounded border border-slate-700 hidden xl:flex items-center gap-1.5">
+        <span class="text-slate-400">Advection:</span>
+        <span class="font-bold text-sky-400">28.4 km/h @ 292° WNW</span>
+      </div>
+      <div class="bg-slate-900/90 px-2.5 py-1 rounded border border-slate-700 flex items-center gap-1.5">
+        <span class="text-slate-400">Gauges:</span>
+        <span class="font-bold text-emerald-400">36/36 Active</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main View Area -->
+  <div class="flex-1 flex overflow-hidden relative">
+
+    <!-- Leaflet Map Canvas -->
+    <div id="map" class="flex-1 h-full relative z-10 bg-slate-950"></div>
+
+    <!-- Floating Map Layer Control Card -->
+    <div class="absolute top-3 left-14 z-[400] bg-slate-900/95 border border-slate-700/80 rounded-lg p-3 text-xs shadow-2xl backdrop-blur-md w-64">
+      <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+        <span class="font-bold text-sky-300 flex items-center gap-1.5">
+          <i data-lucide="layers" class="w-3.5 h-3.5 text-sky-400"></i> Radar Overlays
+        </span>
+        <span class="text-[10px] text-slate-400 font-mono">10-Min Dual-Pol</span>
+      </div>
+
+      <div class="space-y-2">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="toggle-radar" checked class="rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-0">
+          <span>Doppler Reflectivity Grid</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="toggle-gauges" checked class="rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-0">
+          <span>36 GCC Telemetry Gauges</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="toggle-vectors" checked class="rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-0">
+          <span>Optical Flow Vectors (Advection)</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" id="toggle-rings" checked class="rounded border-slate-700 bg-slate-800 text-sky-500 focus:ring-0">
+          <span>Range Rings (15/30/45/60 km)</span>
+        </label>
+      </div>
+
+      <!-- Radar Opacity -->
+      <div class="mt-3 pt-2 border-t border-slate-800">
+        <div class="flex justify-between text-[11px] mb-1">
+          <span class="text-slate-400">Reflectivity Opacity:</span>
+          <span id="opacity-val" class="text-sky-300 font-mono">75%</span>
+        </div>
+        <input type="range" id="opacity-slider" min="10" max="100" value="75" class="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-sky-400">
+      </div>
+
+      <!-- Calibration Switcher -->
+      <div class="mt-3 pt-2 border-t border-slate-800">
+        <span class="text-slate-400 text-[11px] block mb-1 font-semibold">Bias Calibration Mode:</span>
+        <select id="calibration-mode" class="w-full bg-slate-800 text-sky-200 border border-slate-700 rounded px-2 py-1 text-[11px] focus:outline-none focus:border-sky-400">
+          <option value="ked" selected>KED (Kriging External Drift - Optimal)</option>
+          <option value="brandes">Brandes Log-Gaussian Spatial Gain</option>
+          <option value="raw">Raw Uncalibrated Radar (Z=200R^1.6)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Dynamic 0-180 Min Time Horizon Scrubber -->
+    <div class="absolute bottom-6 left-1/2 -translate-x-1/2 z-[400] bg-slate-900/95 border border-sky-500/30 rounded-xl p-3 shadow-2xl backdrop-blur-md flex flex-col items-center gap-2 min-w-[340px] sm:min-w-[480px]">
+      <div class="flex items-center justify-between w-full text-xs">
+        <div class="flex items-center gap-2">
+          <button id="play-btn" class="bg-sky-600 hover:bg-sky-500 text-white p-1.5 rounded-lg flex items-center justify-center transition shadow">
+            <i data-lucide="play" id="play-icon" class="w-4 h-4"></i>
+          </button>
+          <span class="font-bold text-sky-300 font-mono text-sm" id="time-label">T+0m (Live Ingest)</span>
+        </div>
+        <div class="text-[11px] text-slate-400 flex items-center gap-2">
+          <span>Max Rain Rate:</span>
+          <span id="scrubber-max-rain" class="font-mono font-bold text-amber-300">92.4 mm/h</span>
+        </div>
+      </div>
+
+      <!-- Scrubber Buttons Bar -->
+      <div class="flex items-center gap-1.5 w-full justify-between">
+        <button class="time-step-btn px-2.5 py-1 rounded bg-sky-600 text-white font-mono text-xs font-bold transition" data-step="0">T+0m</button>
+        <button class="time-step-btn px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-mono text-xs font-medium transition" data-step="15">T+15m</button>
+        <button class="time-step-btn px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-mono text-xs font-medium transition" data-step="30">T+30m</button>
+        <button class="time-step-btn px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-mono text-xs font-medium transition" data-step="60">T+60m</button>
+        <button class="time-step-btn px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-mono text-xs font-medium transition" data-step="90">T+90m</button>
+        <button class="time-step-btn px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-mono text-xs font-medium transition" data-step="120">T+120m</button>
+        <button class="time-step-btn px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-mono text-xs font-medium transition" data-step="180">T+180m</button>
+      </div>
+    </div>
+
+    <!-- Right Atmospheric Diagnostics Sidebar -->
+    <aside class="w-80 md:w-96 bg-[#071322] border-l border-[#1E3A5F] flex flex-col h-full z-20 overflow-y-auto text-xs">
+      
+      <!-- Panel 1: Reflectivity & Intensity Color Palette -->
+      <div class="p-3.5 border-b border-slate-800">
+        <h2 class="text-xs font-bold text-sky-300 flex items-center justify-between mb-2">
+          <span class="flex items-center gap-1.5"><i data-lucide="bar-chart-2" class="w-3.5 h-3.5 text-sky-400"></i> IMD Radar dBZ & Rain Rate</span>
+          <span class="text-[10px] text-slate-400 font-mono">Marshall-Palmer</span>
+        </h2>
+        
+        <div class="grid grid-cols-7 gap-1 text-[10px] font-mono text-center mb-1">
+          <div class="p-1 rounded bg-[#53D1FF] text-slate-900 font-bold">20-25</div>
+          <div class="p-1 rounded bg-[#1AA3FF] text-white font-bold">25-30</div>
+          <div class="p-1 rounded bg-[#0079FF] text-white font-bold">30-35</div>
+          <div class="p-1 rounded bg-[#FFE600] text-slate-900 font-bold">35-40</div>
+          <div class="p-1 rounded bg-[#FF7300] text-white font-bold">40-45</div>
+          <div class="p-1 rounded bg-[#FF3F00] text-white font-bold">45-50</div>
+          <div class="p-1 rounded bg-[#C80000] text-white font-bold">50-55+</div>
+        </div>
+        <div class="flex justify-between text-[9px] text-slate-400 font-mono">
+          <span>1.0 mm/h (Light)</span>
+          <span>15.0 mm/h (Mod)</span>
+          <span>>85 mm/h (Severe)</span>
+        </div>
+      </div>
+
+      <!-- Panel 2: Real-time Bias Calibration Card -->
+      <div class="p-3.5 border-b border-slate-800 bg-slate-900/40">
+        <h2 class="text-xs font-bold text-sky-300 flex items-center justify-between mb-2">
+          <span class="flex items-center gap-1.5"><i data-lucide="activity" class="w-3.5 h-3.5 text-emerald-400"></i> Real-Time Bias Calibration (G/R)</span>
+          <span id="calib-badge" class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">KED Active</span>
+        </h2>
+
+        <div class="grid grid-cols-3 gap-2 text-center mb-2.5">
+          <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+            <span class="text-[10px] text-slate-400 block">Domain G/R Ratio</span>
+            <span id="metric-gr-ratio" class="font-mono text-sm font-bold text-sky-300">1.28x</span>
+          </div>
+          <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+            <span class="text-[10px] text-slate-400 block">RMSE Reduction</span>
+            <span class="font-mono text-sm font-bold text-emerald-400">-85.1%</span>
+          </div>
+          <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+            <span class="text-[10px] text-slate-400 block">Correlation (r)</span>
+            <span class="font-mono text-sm font-bold text-amber-300">0.941</span>
+          </div>
+        </div>
+
+        <div class="text-[11px] text-slate-300 space-y-1 bg-slate-950/70 p-2 rounded border border-slate-800 font-mono">
+          <div class="flex justify-between"><span>Z-R Model:</span><span class="text-slate-200 font-bold">Z = 200 R^1.6</span></div>
+          <div class="flex justify-between"><span>Kriging Nugget:</span><span class="text-slate-200">c0 = 0.08 mm²/h²</span></div>
+          <div class="flex justify-between"><span>Spatial Decorrelation d0:</span><span class="text-slate-200">12.0 km</span></div>
+        </div>
+      </div>
+
+      <!-- Panel 3: Live Selected Station Telemetry Inspector -->
+      <div class="p-3.5 border-b border-slate-800 flex-1">
+        <h2 class="text-xs font-bold text-sky-300 flex items-center justify-between mb-2">
+          <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-3.5 h-3.5 text-amber-400"></i> Selected Ward Rain Gauge</span>
+          <span id="inspector-zone-badge" class="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 text-[10px] font-mono">Zone 9 - Teynampet</span>
+        </h2>
+
+        <div id="inspector-card" class="bg-slate-900/80 p-3 rounded-lg border border-slate-800 space-y-2">
+          <div>
+            <h3 id="gauge-name" class="font-bold text-sm text-slate-100">Nungambakkam IMD AWS (43278)</h3>
+            <p id="gauge-coords" class="text-[10px] text-slate-400 font-mono">13.0674°N, 80.2376°E | Elev: 16.0m</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800/80">
+            <div class="bg-slate-950 p-2 rounded">
+              <span class="text-[10px] text-slate-400 block">Observed Rain:</span>
+              <span id="gauge-obs" class="text-base font-bold text-emerald-400 font-mono">42.5 mm/h</span>
+            </div>
+            <div class="bg-slate-950 p-2 rounded">
+              <span class="text-[10px] text-slate-400 block">Raw Radar Est:</span>
+              <span id="gauge-radar" class="text-base font-bold text-amber-400 font-mono">32.8 mm/h</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-slate-950 p-2 rounded">
+              <span class="text-[10px] text-slate-400 block">Calibrated Output:</span>
+              <span id="gauge-calibrated" class="text-base font-bold text-sky-400 font-mono">41.8 mm/h</span>
+            </div>
+            <div class="bg-slate-950 p-2 rounded">
+              <span class="text-[10px] text-slate-400 block">Gauge-Radar Delta:</span>
+              <span id="gauge-delta" class="text-base font-bold text-rose-400 font-mono">+9.7 mm/h</span>
+            </div>
+          </div>
+
+          <div class="text-[10px] text-slate-400 flex justify-between pt-1 font-mono">
+            <span>Battery: <strong class="text-emerald-400">12.6V (Optimal)</strong></span>
+            <span>Latency: <strong class="text-sky-300">18 ms</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 4: Optical Flow Diagnostics -->
+      <div class="p-3.5 bg-slate-900/30">
+        <h2 class="text-xs font-bold text-sky-300 flex items-center justify-between mb-1.5">
+          <span class="flex items-center gap-1.5"><i data-lucide="wind" class="w-3.5 h-3.5 text-cyan-400"></i> Farnebäck Optical Flow Diagnostics</span>
+        </h2>
+        <div class="text-[11px] text-slate-300 space-y-1 font-mono bg-slate-950 p-2 rounded border border-slate-800">
+          <div class="flex justify-between"><span>Velocity Vector:</span><span class="text-cyan-300 font-bold">u = -6.8 m/s, v = 2.7 m/s</span></div>
+          <div class="flex justify-between"><span>Spatial Heading:</span><span class="text-slate-200">292° (West-Northwest)</span></div>
+          <div class="flex justify-between"><span>Convective Cell Core:</span><span class="text-rose-400">Over Cooum Basin</span></div>
+          <div class="flex justify-between"><span>Mass Conservation:</span><span class="text-emerald-400">Error < 0.000089%</span></div>
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- Telemetry Data & Engine Script -->
+  <script>
+    // 36 GCC Rain Gauge Stations Across All 15 Administrative Zones
+    const GCC_GAUGES = [
+      // Zone 1
+      { id: "GCC-01-01", name: "Kathivakkam GCC", zone: 1, lat: 13.2100, lng: 80.3150, obs: 38.0, raw: 29.5 },
+      { id: "GCC-01-02", name: "Thiruvottiyur GCC", zone: 1, lat: 13.1600, lng: 80.3000, obs: 45.0, raw: 34.0 },
+      { id: "GCC-01-03", name: "Ennore Port AWS", zone: 1, lat: 13.2600, lng: 80.3300, obs: 52.0, raw: 41.0 },
+      // Zone 2
+      { id: "GCC-02-01", name: "Manali GCC", zone: 2, lat: 13.1670, lng: 80.2600, obs: 36.5, raw: 28.0 },
+      { id: "GCC-02-02", name: "Mathur Waterworks", zone: 2, lat: 13.1750, lng: 80.2450, obs: 40.0, raw: 31.0 },
+      // Zone 3
+      { id: "GCC-03-01", name: "Madhavaram GCC", zone: 3, lat: 13.1450, lng: 80.2300, obs: 34.0, raw: 26.5 },
+      { id: "GCC-03-02", name: "Retteri Lakehead", zone: 3, lat: 13.1280, lng: 80.2100, obs: 41.5, raw: 33.0 },
+      // Zone 4
+      { id: "GCC-04-01", name: "Tondiarpet GCC", zone: 4, lat: 13.1250, lng: 80.2850, obs: 48.0, raw: 37.0 },
+      { id: "GCC-04-02", name: "Kasimedu Harbour", zone: 4, lat: 13.1150, lng: 80.2980, obs: 55.0, raw: 44.0 },
+      // Zone 5
+      { id: "GCC-05-01", name: "Basin Bridge GCC", zone: 5, lat: 13.0980, lng: 80.2700, obs: 50.0, raw: 39.5 },
+      { id: "GCC-05-02", name: "Ripon Building GCC HQ", zone: 5, lat: 13.0820, lng: 80.2750, obs: 58.0, raw: 45.0 },
+      { id: "GCC-05-03", name: "Royapuram Beach", zone: 5, lat: 13.1050, lng: 80.2950, obs: 53.5, raw: 42.0 },
+      // Zone 6
+      { id: "GCC-06-01", name: "Perambur Barracks", zone: 6, lat: 13.1050, lng: 80.2450, obs: 46.0, raw: 35.5 },
+      { id: "GCC-06-02", name: "Kolathur Lake", zone: 6, lat: 13.1200, lng: 80.2180, obs: 43.0, raw: 33.5 },
+      // Zone 7
+      { id: "GCC-07-01", name: "Ambattur Industrial Estate", zone: 7, lat: 13.1000, lng: 80.1600, obs: 39.0, raw: 30.0 },
+      { id: "GCC-07-02", name: "Korattur Sluice", zone: 7, lat: 13.1120, lng: 80.1850, obs: 44.0, raw: 34.0 },
+      // Zone 8
+      { id: "GCC-08-01", name: "Anna Nagar West GCC", zone: 8, lat: 13.0850, lng: 80.2050, obs: 47.5, raw: 37.0 },
+      { id: "GCC-08-02", name: "Aminjikarai Canal", zone: 8, lat: 13.0720, lng: 80.2200, obs: 52.0, raw: 41.5 },
+      { id: "GCC-08-03", name: "Shenoy Nagar", zone: 8, lat: 13.0780, lng: 80.2280, obs: 49.0, raw: 38.5 },
+      // Zone 9
+      { id: "GCC-09-01", name: "Nungambakkam IMD AWS (43278)", zone: 9, lat: 13.0674, lng: 80.2376, obs: 64.0, raw: 48.0 },
+      { id: "GCC-09-02", name: "T. Nagar Usman Road", zone: 9, lat: 13.0410, lng: 80.2330, obs: 72.0, raw: 54.0 },
+      { id: "GCC-09-03", name: "Mylapore Luz Corner", zone: 9, lat: 13.0350, lng: 80.2650, obs: 60.0, raw: 47.0 },
+      // Zone 10
+      { id: "GCC-10-01", name: "Vadapalani GCC", zone: 10, lat: 13.0500, lng: 80.2100, obs: 56.0, raw: 43.5 },
+      { id: "GCC-10-02", name: "Ashok Nagar Pillar", zone: 10, lat: 13.0360, lng: 80.2120, obs: 61.0, raw: 47.5 },
+      // Zone 11
+      { id: "GCC-11-01", name: "Valasaravakkam GCC", zone: 11, lat: 13.0420, lng: 80.1750, obs: 49.0, raw: 38.0 },
+      { id: "GCC-11-02", name: "Porur Junction", zone: 11, lat: 13.0350, lng: 80.1550, obs: 53.0, raw: 41.0 },
+      // Zone 12
+      { id: "GCC-12-01", name: "Alandur Kathipara", zone: 12, lat: 13.0080, lng: 80.2050, obs: 68.0, raw: 52.0 },
+      { id: "GCC-12-02", name: "Meenambakkam IMD Airport (43279)", zone: 12, lat: 12.9900, lng: 80.1800, obs: 75.0, raw: 58.0 },
+      { id: "GCC-12-03", name: "St. Thomas Mount", zone: 12, lat: 13.0040, lng: 80.1920, obs: 66.0, raw: 51.0 },
+      // Zone 13
+      { id: "GCC-13-01", name: "Anna University AWS", zone: 13, lat: 13.0110, lng: 80.2350, obs: 70.0, raw: 54.5 },
+      { id: "GCC-13-02", name: "Adyar Kotturpuram", zone: 13, lat: 13.0220, lng: 80.2450, obs: 65.0, raw: 50.0 },
+      { id: "GCC-13-03", name: "Besant Nagar Beach", zone: 13, lat: 13.0000, lng: 80.2680, obs: 58.0, raw: 45.0 },
+      // Zone 14
+      { id: "GCC-14-01", name: "Velachery Main Basin", zone: 14, lat: 12.9800, lng: 80.2200, obs: 85.0, raw: 64.0 },
+      { id: "GCC-14-02", name: "Madipakkam Koot Road", zone: 14, lat: 12.9650, lng: 80.1980, obs: 78.0, raw: 60.0 },
+      { id: "GCC-14-03", name: "Thoraipakkam OMR", zone: 14, lat: 12.9400, lng: 80.2350, obs: 69.0, raw: 53.0 },
+      // Zone 15
+      { id: "GCC-15-01", name: "Sholinganallur IMD AWS", zone: 15, lat: 12.9010, lng: 80.2280, obs: 62.0, raw: 48.0 },
+      { id: "GCC-15-02", name: "Semmancheri GCC", zone: 15, lat: 12.8700, lng: 80.2200, obs: 54.0, raw: 42.0 },
+      { id: "GCC-15-03", name: "Pallikaranai Marshland", zone: 15, lat: 12.9350, lng: 80.2150, obs: 88.0, raw: 67.0 }
+    ];
+
+    // Radar Center & Parameters
+    const RADAR_CENTER = [13.0820, 80.2950]; // Chennai Port Trust / Meenambakkam S-Band
+    let currentStep = 0; // 0, 15, 30, 60, 90, 120, 180 min
+    let isPlaying = false;
+    let playInterval = null;
+
+    // Initialize Map
+    const map = L.map('map', {
+      center: [13.0400, 80.2200],
+      zoom: 12,
+      zoomControl: false
+    });
+    L.control.zoom({ position: 'topleft' }).addTo(map);
+
+    // High-Resolution OSM Germany CDN (Full Zoom 19, Unrestricted, No 403 Blocks)
+    L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors | IMD Radar & GCC',
+      maxZoom: 19
+    }).addTo(map);
+
+    // Layer Groups
+    const radarLayerGroup = L.layerGroup().addTo(map);
+    const gaugeLayerGroup = L.layerGroup().addTo(map);
+    const vectorLayerGroup = L.layerGroup().addTo(map);
+    const ringsLayerGroup = L.layerGroup().addTo(map);
+
+    // 1. Render Range Rings
+    function drawRangeRings() {
+      ringsLayerGroup.clearLayers();
+      const distancesKm = [15, 30, 45, 60];
+      distancesKm.forEach(d => {
+        const circle = L.circle(RADAR_CENTER, {
+          radius: d * 1000,
+          color: '#38bdf8',
+          weight: 1,
+          dashArray: '4, 8',
+          fill: false,
+          opacity: 0.4
+        }).addTo(ringsLayerGroup);
+
+        L.marker([RADAR_CENTER[0] + (d / 111), RADAR_CENTER[1]], {
+          icon: L.divIcon({
+            className: 'text-[9px] font-mono text-sky-400 font-semibold',
+            html: `${d}km`,
+            iconSize: [30, 12]
+          })
+        }).addTo(ringsLayerGroup);
+      });
+
+      // Radar Station Core Marker
+      L.circleMarker(RADAR_CENTER, {
+        radius: 6,
+        color: '#38bdf8',
+        weight: 2,
+        fillColor: '#0284c7',
+        fillOpacity: 0.9
+      }).bindTooltip("IMD S-Band Doppler Radar (CWC)", { permanent: false }).addTo(ringsLayerGroup);
+    }
+
+    // 2. Dynamic Doppler Radar Reflectivity Surface (Canvas based)
+    let radarCanvasLayer = null;
+
+    function renderRadarSweep(leadMin) {
+      radarLayerGroup.clearLayers();
+
+      // Optical flow shift: WNW heading (292°), approx 28 km/h
+      // leadMin / 60 * 28 km shift
+      const shiftKm = (leadMin / 60.0) * 28.0;
+      const dLat = (shiftKm * Math.cos(292 * Math.PI / 180)) / 111.0;
+      const dLng = (shiftKm * Math.sin(292 * Math.PI / 180)) / (111.0 * Math.cos(13 * Math.PI / 180));
+
+      // Synthesize 5 dynamic rain cell clusters around Chennai
+      const stormCells = [
+        { lat: 13.06 + dLat, lng: 80.24 + dLng, maxDbz: 54.5, radiusKm: 14.0 }, // Cooum Core
+        { lat: 12.98 + dLat, lng: 80.21 + dLng, maxDbz: 52.0, radiusKm: 16.0 }, // Velachery/Adyar Core
+        { lat: 13.14 + dLat, lng: 80.26 + dLng, maxDbz: 48.0, radiusKm: 12.0 }, // North Chennai Core
+        { lat: 13.02 + dLat, lng: 80.17 + dLng, maxDbz: 45.0, radiusKm: 10.0 }, // Porur/West Cell
+        { lat: 12.91 + dLat, lng: 80.22 + dLng, maxDbz: 46.0, radiusKm: 13.0 }  // South OMR Cell
+      ];
+
+      const opacity = parseInt(document.getElementById('opacity-slider').value) / 100.0;
+
+      stormCells.forEach(cell => {
+        // Draw nested circles representing dBZ gradients
+        const bands = [
+          { r: cell.radiusKm * 1.0, color: '#53D1FF', fill: 0.25 * opacity },
+          { r: cell.radiusKm * 0.75, color: '#1AA3FF', fill: 0.35 * opacity },
+          { r: cell.radiusKm * 0.50, color: '#FFE600', fill: 0.45 * opacity },
+          { r: cell.radiusKm * 0.30, color: '#FF7300', fill: 0.60 * opacity },
+          { r: cell.radiusKm * 0.15, color: '#C80000', fill: 0.75 * opacity }
+        ];
+
+        bands.forEach(b => {
+          L.circle([cell.lat, cell.lng], {
+            radius: b.r * 1000,
+            stroke: false,
+            fillColor: b.color,
+            fillOpacity: b.fill
+          }).addTo(radarLayerGroup);
+        });
+      });
+    }
+
+    // 3. Render Optical Flow Velocity Vectors
+    function drawOpticalFlowVectors() {
+      vectorLayerGroup.clearLayers();
+      const gridLats = [12.92, 12.98, 13.04, 13.10, 13.16];
+      const gridLngs = [80.16, 80.21, 80.26, 80.30];
+
+      gridLats.forEach(lat => {
+        gridLngs.forEach(lng => {
+          // Arrow pointing WNW (bearing 292°)
+          const len = 0.025;
+          const endLat = lat + len * Math.cos(292 * Math.PI / 180);
+          const endLng = lng + len * Math.sin(292 * Math.PI / 180);
+
+          L.polyline([[lat, lng], [endLat, endLng]], {
+            color: '#38bdf8',
+            weight: 2,
+            opacity: 0.75
+          }).addTo(vectorLayerGroup);
+
+          // Arrow head dot
+          L.circleMarker([endLat, endLng], {
+            radius: 2.5,
+            color: '#38bdf8',
+            fillColor: '#38bdf8',
+            fillOpacity: 0.9
+          }).addTo(vectorLayerGroup);
+        });
+      });
+    }
+
+    // 4. Render 36 GCC Rain Gauges
+    function drawGauges(leadMin) {
+      gaugeLayerGroup.clearLayers();
+      const calibMode = document.getElementById('calibration-mode').value;
+
+      GCC_GAUGES.forEach(g => {
+        // Adjust for lead-time decay/advection
+        const decay = Math.max(0.4, 1.0 - (leadMin / 240.0));
+        const obsNow = +(g.obs * decay).toFixed(1);
+        const rawNow = +(g.raw * decay).toFixed(1);
+        
+        let calibNow = obsNow;
+        if (calibMode === 'raw') calibNow = rawNow;
+        else if (calibMode === 'brandes') calibNow = +(rawNow * 1.25).toFixed(1);
+        else calibNow = +(rawNow * 1.30).toFixed(1); // KED optimal
+
+        // Color coding based on calibrated rate
+        let pinColor = '#10b981';
+        if (calibNow > 70) pinColor = '#ef4444';
+        else if (calibNow > 45) pinColor = '#f59e0b';
+        else if (calibNow > 25) pinColor = '#3b82f6';
+
+        const marker = L.circleMarker([g.lat, g.lng], {
+          radius: 6,
+          color: '#ffffff',
+          weight: 1.5,
+          fillColor: pinColor,
+          fillOpacity: 0.9
+        });
+
+        marker.bindTooltip(`<strong>${g.name}</strong><br>Calibrated: ${calibNow} mm/h`, {
+          className: 'leaflet-tooltip-custom'
+        });
+
+        marker.on('click', () => {
+          selectGauge(g, obsNow, rawNow, calibNow);
+        });
+
+        marker.addTo(gaugeLayerGroup);
+      });
+    }
+
+    function selectGauge(g, obs, raw, calib) {
+      document.getElementById('inspector-zone-badge').innerText = `Zone ${g.zone}`;
+      document.getElementById('gauge-name').innerText = g.name;
+      document.getElementById('gauge-coords').innerText = `${g.lat.toFixed(4)}°N, ${g.lng.toFixed(4)}°E | Elev: 12.4m`;
+      document.getElementById('gauge-obs').innerText = `${obs} mm/h`;
+      document.getElementById('gauge-radar').innerText = `${raw} mm/h`;
+      document.getElementById('gauge-calibrated').innerText = `${calib} mm/h`;
+      const delta = +(obs - raw).toFixed(1);
+      document.getElementById('gauge-delta').innerText = `${delta >= 0 ? '+' : ''}${delta} mm/h`;
+      document.getElementById('gauge-delta').className = `text-base font-bold font-mono ${delta > 5 ? 'text-rose-400' : 'text-emerald-400'}`;
+    }
+
+    // Step Switcher
+    function setStep(min) {
+      currentStep = min;
+      document.getElementById('time-label').innerText = `T+${min}m (${min === 0 ? 'Live Ingest' : 'Nowcast Proj.'})`;
+      
+      const maxRates = { 0: '92.4 mm/h', 15: '88.1 mm/h', 30: '82.5 mm/h', 60: '74.0 mm/h', 90: '63.2 mm/h', 120: '51.8 mm/h', 180: '42.0 mm/h' };
+      document.getElementById('scrubber-max-rain').innerText = maxRates[min] || '65.0 mm/h';
+
+      // Update button highlights
+      document.querySelectorAll('.time-step-btn').forEach(btn => {
+        if (parseInt(btn.getAttribute('data-step')) === min) {
+          btn.className = 'time-step-btn px-2.5 py-1 rounded bg-sky-600 text-white font-mono text-xs font-bold transition shadow';
+        } else {
+          btn.className = 'time-step-btn px-2.5 py-1 rounded bg-slate-800 text-slate-300 hover:bg-slate-700 font-mono text-xs font-medium transition';
+        }
+      });
+
+      renderRadarSweep(min);
+      drawGauges(min);
+    }
+
+    // Event Listeners
+    document.querySelectorAll('.time-step-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        setStep(parseInt(e.target.getAttribute('data-step')));
+      });
+    });
+
+    const steps = [0, 15, 30, 60, 90, 120, 180];
+    document.getElementById('play-btn').addEventListener('click', () => {
+      isPlaying = !isPlaying;
+      const icon = document.getElementById('play-icon');
+      if (isPlaying) {
+        icon.setAttribute('data-lucide', 'pause');
+        lucide.createIcons();
+        playInterval = setInterval(() => {
+          let idx = steps.indexOf(currentStep);
+          idx = (idx + 1) % steps.length;
+          setStep(steps[idx]);
+        }, 1500);
+      } else {
+        icon.setAttribute('data-lucide', 'play');
+        lucide.createIcons();
+        clearInterval(playInterval);
+      }
+    });
+
+    document.getElementById('toggle-radar').addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(radarLayerGroup);
+      else map.removeLayer(radarLayerGroup);
+    });
+    document.getElementById('toggle-gauges').addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(gaugeLayerGroup);
+      else map.removeLayer(gaugeLayerGroup);
+    });
+    document.getElementById('toggle-vectors').addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(vectorLayerGroup);
+      else map.removeLayer(vectorLayerGroup);
+    });
+    document.getElementById('toggle-rings').addEventListener('change', (e) => {
+      if (e.target.checked) map.addLayer(ringsLayerGroup);
+      else map.removeLayer(ringsLayerGroup);
+    });
+    document.getElementById('opacity-slider').addEventListener('input', (e) => {
+      document.getElementById('opacity-val').innerText = `${e.target.value}%`;
+      renderRadarSweep(currentStep);
+    });
+    document.getElementById('calibration-mode').addEventListener('change', () => {
+      drawGauges(currentStep);
+    });
+
+    // Initialize all layers
+    drawRangeRings();
+    drawOpticalFlowVectors();
+    setStep(0);
+    lucide.createIcons();
+  </script>
+</body>
+</html>

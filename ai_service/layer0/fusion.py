@@ -76,32 +76,55 @@ class MultiSensorKalmanFusion:
              cml_telemetry: Optional[Dict[str, Dict[str, Any]]] = None) -> Tuple[np.ndarray, Dict[str, Any]]:
         """Perform 2D Optimal Interpolation multi-sensor fusion."""
         c = 0.1
-        clean_radar = np.nan_to_num(radar_grid, nan=0.0)
+        clean_radar = np.nan_to_num(radar_grid, nan=0.0, posinf=500.0, neginf=0.0).astype(np.float64)
         x_b = np.log(np.maximum(0.0, clean_radar.ravel()) + c).astype(np.float64)
 
         # Extract gauge and CML observations
         obs_coords, obs_vals, obs_vars = [], [], []
 
         # 1. Gauges
-        for g_id, g in gauges_data.items():
-            lat = g.get('latitude', g.get('lat'))
-            lon = g.get('longitude', g.get('lon'))
-            rate = max(0.0, g.get('rainfall_rate_mm_hr', g.get('rate', 0.0)))
-            if lat is not None and lon is not None:
-                obs_coords.append([lat, lon])
-                obs_vals.append(np.log(rate + c))
-                obs_vars.append(0.08 + 0.02 * np.sqrt(rate))
+        if gauges_data:
+            for g_id, g in gauges_data.items():
+                if not isinstance(g, dict):
+                    continue
+                lat = g.get('latitude', g.get('lat'))
+                lon = g.get('longitude', g.get('lon'))
+                raw_rate = g.get('rainfall_rate_mm_hr', g.get('rate', 0.0))
+                if lat is not None and lon is not None:
+                    try:
+                        f_lat = float(lat)
+                        f_lon = float(lon)
+                        f_rate = float(raw_rate) if raw_rate is not None else 0.0
+                        if not (np.isfinite(f_lat) and np.isfinite(f_lon)):
+                            continue
+                        f_rate = max(0.0, f_rate) if np.isfinite(f_rate) else 0.0
+                        obs_coords.append([f_lat, f_lon])
+                        obs_vals.append(np.log(f_rate + c))
+                        obs_vars.append(0.08 + 0.02 * np.sqrt(f_rate))
+                    except (ValueError, TypeError):
+                        continue
 
         # 2. CML Midpoints (if provided)
         if cml_telemetry:
             for c_id, c_link in cml_telemetry.items():
+                if not isinstance(c_link, dict):
+                    continue
                 lat = c_link.get('midpoint_lat')
                 lon = c_link.get('midpoint_lon')
-                rate = max(0.0, c_link.get('retrieved_rain_rate_mm_hr', 0.0))
+                raw_rate = c_link.get('retrieved_rain_rate_mm_hr', 0.0)
                 if lat is not None and lon is not None:
-                    obs_coords.append([lat, lon])
-                    obs_vals.append(np.log(rate + c))
-                    obs_vars.append(0.12 + 0.03 * np.sqrt(rate))
+                    try:
+                        f_lat = float(lat)
+                        f_lon = float(lon)
+                        f_rate = float(raw_rate) if raw_rate is not None else 0.0
+                        if not (np.isfinite(f_lat) and np.isfinite(f_lon)):
+                            continue
+                        f_rate = max(0.0, f_rate) if np.isfinite(f_rate) else 0.0
+                        obs_coords.append([f_lat, f_lon])
+                        obs_vals.append(np.log(f_rate + c))
+                        obs_vars.append(0.12 + 0.03 * np.sqrt(f_rate))
+                    except (ValueError, TypeError):
+                        continue
 
         P_obs = len(obs_vals)
         if P_obs == 0:

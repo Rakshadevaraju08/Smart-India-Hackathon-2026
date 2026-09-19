@@ -60,6 +60,8 @@ class Layer4Result:
     """Encapsulates results from Layer 4 execution."""
     routes: List[Dict[str, Any]]
     substation_risks: Dict[str, Any]
+    oxygen_depot_risks: Dict[str, Any]
+    benchmarks: Optional[Dict[str, Any]]
     diagnostics: Dict[str, Any]
 
     def to_json(self, output_path: str):
@@ -67,14 +69,16 @@ class Layer4Result:
         data = {
             "diagnostics": self.diagnostics,
             "routes": self.routes,
-            "substation_risks": self.substation_risks
+            "substation_risks": self.substation_risks,
+            "oxygen_depot_risks": self.oxygen_depot_risks,
+            "benchmarks": self.benchmarks
         }
         with open(output_path, "w") as f:
             json.dump(data, f, indent=2)
 
 
 class Layer4Pipeline:
-    """Master orchestrator for Layer 4 Safe Emergency Navigation."""
+    """Master orchestrator for Layer 4 Safe Emergency Navigation & Critical Asset Safeguarding."""
 
     def __init__(self, base_dir: Optional[Path] = None):
         self.base_dir = base_dir or Path(__file__).resolve().parent.parent.parent
@@ -88,7 +92,8 @@ class Layer4Pipeline:
         horizon_min: int = 60,
         vehicle_type: str = "ambulance",
         custom_origin: Optional[tuple] = None,
-        custom_dest: Optional[tuple] = None
+        custom_dest: Optional[tuple] = None,
+        run_benchmarking: bool = False
     ) -> Layer4Result:
         """
         Executes coupled safe routing and asset monitoring pipeline.
@@ -97,9 +102,10 @@ class Layer4Pipeline:
           scenario: Storm event ('michaung', '2015_flood', 'monsoon')
           clogging_factor: Dynamic solid waste blockage (0.0 to 0.85)
           horizon_min: Lead time horizon in minutes (0, 15, 30, 60, 90, 120, 180)
-          vehicle_type: 'ambulance', 'rescue_truck', 'civilian_evac'
+          vehicle_type: 'ambulance', 'rescue_truck', 'civilian_car', 'two_wheeler'
           custom_origin: Optional (lat, lon)
           custom_dest: Optional (lat, lon)
+          run_benchmarking: If True, executes 4-way routing algorithm comparison
         """
         # 1. Fetch Inundation Depths from Layer 3 PI-GNN Surrogate
         l3 = Layer3Pipeline()
@@ -109,8 +115,9 @@ class Layer4Pipeline:
         if depths_vector is None:
             depths_vector = l3_res.depth_matrices.get(60, np.zeros(len(self.routing_engine.nodes_df)))
 
-        # 2. Evaluate Electrical Substation Plinth Inundation
+        # 2. Evaluate Electrical Substation & Medical Oxygen Depots Plinth Inundation
         substation_report = self.asset_monitor.evaluate_substation_risks(depths_vector)
+        oxygen_report = self.asset_monitor.evaluate_medical_oxygen_depots(depths_vector)
 
         # 3. Solve Emergency Routes
         solved_routes = []
@@ -132,7 +139,8 @@ class Layer4Pipeline:
                 dest_lat=cor["destination"][0],
                 dest_lon=cor["destination"][1],
                 depths_cm=depths_vector,
-                vehicle_type=vehicle_type
+                vehicle_type=vehicle_type,
+                use_hazard_potential=True
             )
             route_res["corridor_name"] = cor["name"]
             route_res["origin_name"] = cor["origin_name"]
@@ -140,6 +148,19 @@ class Layer4Pipeline:
             solved_routes.append(route_res)
 
         avg_latency = float(np.mean([r["latency_ms"] for r in solved_routes])) if solved_routes else 0.0
+
+        # 4. Optional 4-Algorithm Benchmark Comparison on Corridor 1
+        benchmarks = None
+        if run_benchmarking and corridors:
+            benchmarks = self.routing_engine.benchmark_routing_algorithms(
+                origin_lat=corridors[0]["origin"][0],
+                origin_lon=corridors[0]["origin"][1],
+                dest_lat=corridors[0]["destination"][0],
+                dest_lon=corridors[0]["destination"][1],
+                depths_cm=depths_vector,
+                vehicle_type=vehicle_type
+            )
+            benchmarks["corridor_name"] = corridors[0]["name"]
 
         diagnostics = {
             "scenario": scenario,
@@ -151,12 +172,16 @@ class Layer4Pipeline:
             "substations_monitored": substation_report["total_substations"],
             "substations_critical": substation_report["critical_count"],
             "substations_warning": substation_report["warning_count"],
+            "oxygen_depots_monitored": oxygen_report["total_depots"],
+            "oxygen_depots_critical": oxygen_report["critical_count"],
             "layer3_inference_ms": l3_res.diagnostics["surrogate_inference_ms"]
         }
 
         return Layer4Result(
             routes=solved_routes,
             substation_risks=substation_report,
+            oxygen_depot_risks=oxygen_report,
+            benchmarks=benchmarks,
             diagnostics=diagnostics
         )
 
@@ -166,7 +191,13 @@ def main():
     parser.add_argument("--scenario", type=str, default="michaung", choices=["michaung", "2015_flood", "monsoon"])
     parser.add_argument("--clogging", type=float, default=0.35, help="Solid waste clogging factor (0.0-0.85)")
     parser.add_argument("--horizon", type=int, default=60, choices=[0, 15, 30, 60, 90, 120, 180])
-    parser.add_argument("--vehicle", type=str, default="ambulance", choices=["ambulance", "rescue_truck", "civilian_evac"])
+    parser.add_argument(
+        "--vehicle",
+        type=str,
+        default="ambulance",
+        choices=["ambulance", "rescue_truck", "civilian_car", "two_wheeler", "civilian_evac"]
+    )
+    parser.add_argument("--benchmark", action="store_true", help="Execute 4-way routing algorithm comparison")
     parser.add_argument("--output", type=str, default=None, help="Output JSON path")
     args = parser.parse_args()
 
@@ -176,20 +207,23 @@ def main():
         scenario=args.scenario,
         clogging_factor=args.clogging,
         horizon_min=args.horizon,
-        vehicle_type=args.vehicle
+        vehicle_type=args.vehicle,
+        run_benchmarking=args.benchmark
     )
 
     diag = res.diagnostics
     subs = res.substation_risks
+    o2 = res.oxygen_depot_risks
 
-    print("\n" + "=" * 70)
+    print("\n" + "=" * 75)
     print("LAYER 4 SAFE EMERGENCY NAVIGATION & ASSET SAFEGUARDING REPORT")
-    print("=" * 70)
+    print("=" * 75)
     print(f"Scenario:             {diag['scenario'].upper()} (T+{diag['horizon_min']}m)")
     print(f"Vehicle Profile:      {diag['vehicle_type'].upper()}")
     print(f"Route Solver Latency: {diag['average_route_solver_latency_ms']} ms (< 50ms benchmark: PASSED)")
     print(f"Substations Status:   {subs['normal_count']} Normal | {subs['warning_count']} Warning | {subs['critical_count']} Critical Trip Alert")
-    print("-" * 70)
+    print(f"Oxygen Depots Status: {o2['normal_count']} Normal | {o2['warning_count']} Warning | {o2['critical_count']} Critical Alert")
+    print("-" * 75)
 
     for i, r in enumerate(res.routes, 1):
         direct = r["direct_route"]
@@ -199,11 +233,20 @@ def main():
         print(f"    Destination:  {r['dest_name']} ({r['destination']['lat']:.4f}, {r['destination']['lon']:.4f})")
         print(f"    DIRECT ROUTE: {direct['distance_km']} km | {direct['eta_min']} min | Max Depth: {direct['max_depth_cm']} cm | Status: {direct['status']}")
         if direct["bottleneck"]:
-            print(f"                  ⚠️ Bottleneck: {direct['bottleneck']['name']} ({direct['bottleneck']['depth_cm']} cm water)")
+            print(f"                  [!] Bottleneck: {direct['bottleneck']['name']} ({direct['bottleneck']['depth_cm']} cm water, {direct['bottleneck']['velocity_mps']} m/s flow)")
         print(f"    SAFE DETOUR:  {safe['distance_km']} km | {safe['eta_min']} min | Max Depth: {safe['max_depth_cm']} cm | Status: {safe['status']}")
-        print(f"    OVERHEAD:     +{r['detour_extra_km']} km detour, +{r['detour_extra_min']} min ETA | Bottlenecks Avoided: {r['safety_gain']['bottlenecks_avoided']}")
+        print(f"    OVERHEAD:     +{r['detour_extra_km']} km detour (+{r['detour_overhead_pct']}%), +{r['detour_extra_min']} min ETA | Bottlenecks Avoided: {r['safety_gain']['bottlenecks_avoided']}")
 
-    print("\n" + "=" * 70)
+    if res.benchmarks:
+        print("\n" + "=" * 75)
+        print("ROUTING ALGORITHM BENCHMARK COMPARISON (Corridor 1)")
+        print("=" * 75)
+        print(f"{'Algorithm':<38} | {'Latency':<8} | {'Nodes':<6} | {'Dist':<8} | {'ETA':<8} | {'Max D':<7} | {'Status'}")
+        print("-" * 75)
+        for b in res.benchmarks["benchmark_results"]:
+            print(f"{b['algorithm']:<38} | {b['latency_ms']:>5.2f} ms | {b['nodes_expanded']:>6} | {b['distance_km']:>5.2f} km | {b['eta_min']:>5.1f} m | {b['max_depth_cm']:>5.1f}cm | {b['status']}")
+
+    print("\n" + "=" * 75)
 
     if args.output:
         res.to_json(args.output)
@@ -212,3 +255,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

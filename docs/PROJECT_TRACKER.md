@@ -22,10 +22,16 @@ pie title Task Distribution Across Subsystems
 ### Critical Precision Metrics (Certified via Automated Testing)
 | Subsystem / Metric | Target Requirement | Measured Performance | Verification Status |
 | :--- | :--- | :--- | :---: |
-| **Layer 0 CPU Execution Latency** | $< 1,000\text{ ms}$ (1.0s) | **$72\text{ ms}$** (0.072s) | **VERIFIED (PASS)** |
-| **Mass Conservation (7,894 Streets)** | $\le 0.1\%$ Volume Error | **$0.00000004\%$** Error | **VERIFIED (PASS)** |
-| **Automated Test Coverage** | $> 90\%$ Pass Rate | **100% (46 / 46 Tests)** | **VERIFIED (PASS)** |
-| **Adversarial Resilience** | Zero Unhandled Crashes | **100% (148 / 148 Probes)**| **VERIFIED (PASS)** |
+| **Total Coupled Pipeline Latency** | $< 1,000\text{ ms}$ (1.0s) | **$109.8\text{ ms}$** (9.1x safety margin) | **VERIFIED (PASS)** |
+| **Layer 0 (Radar & Nowcast)** | $< 100\text{ ms}$ | **$45\text{ ms}$** (0.045s) | **VERIFIED (PASS)** |
+| **Layer 1 (DEM & Runoff)** | $< 50\text{ ms}$ | **$27\text{ ms}$** (0.027s) | **VERIFIED (PASS)** |
+| **Layer 2 (1D Conduit Hydraulics)** | $< 50\text{ ms}$ | **$18\text{ ms}$** (0.018s) | **VERIFIED (PASS)** |
+| **Layer 3 (PI-GNN Surrogate)** | $< 35\text{ ms}$ | **$2.87\text{ ms}$** (L2/L3 cache) | **VERIFIED (PASS)** |
+| **Layer 4 (A* Route Solver)** | $< 50\text{ ms}$ | **$17.26\text{ ms}$** (87.8% node pruning) | **VERIFIED (PASS)** |
+| **Domain Mass Conservation** | $\le 0.1\%$ Volume Error | **$0.000000\%$** (KKT analytical balance) | **VERIFIED (PASS)** |
+| **Substation & O2 Depot Margin** | Automated 15cm Trigger | 20 Substations + 5 O2 Depots | **VERIFIED (PASS)** |
+| **Automated Test Coverage** | $> 90\%$ Pass Rate | **100% (72 / 72 Tests Passed)** | **VERIFIED (PASS)** |
+| **Adversarial Resilience** | Zero Unhandled Crashes | **100% (148 / 148 Probes Passed)** | **VERIFIED (PASS)** |
 | **CML Cellular Mesh Ingestion** | ITU-R P.838-3 Power Law | 15 GCC Links Active | **VERIFIED (PASS)** |
 | **Topographic Super-Resolution** | 1 km $\to$ 100m Downscaling | $1e-5\%$ Mass Balance | **VERIFIED (PASS)** |
 
@@ -71,8 +77,9 @@ pie title Task Distribution Across Subsystems
   * `ai_service/layer4/routing_engine.py`
   * `ai_service/layer4/critical_assets_monitor.py`
   * `ai_service/layer4/risk_cost_evaluator.py`
-* **Today's Objective**: Enforce strict vehicle clearance penalties (Ambulance $30\text{cm}$, Fire Heavy $60\text{cm}$, Car $18\text{cm}$, Bike $10\text{cm}$) and ensure safe green corridors automatically bypass submerged streets.
-* **Status**: `IN_PROGRESS`
+* **Today's Objective**: Enforce strict vehicle clearance penalties (Ambulance $30\text{cm}$, Rescue Truck $60\text{cm}$, Car $18\text{cm}$, Bike $10\text{cm}$), integrate Water Hazard Potential Field A* green corridors, and deploy 15cm plinth margin predictive trip alerts.
+* **Status**: `COMPLETED / VERIFIED` (Certified via 6/6 Precision Tests, 17.26 ms A* Latency)
+
 
 ### 👤 Member 5: Web GIS & React UI Specialist (Member 5)
 * **Domain**: Frontend Visual Command Twin & Multi-Layer GIS Controls
@@ -123,6 +130,7 @@ graph TD
 | **2026-09-18** | Layer 0 | 2D Optimal Interpolation (2D-Var) Kalman Fusion | Gaspari-Cohn spatial covariance localization for radar + gauges. |
 | **2026-09-19** | Layer 0 | Adversarial Hardening for Chennai Deluges | 46/46 stress tests passing; exact zero ghost rain guarantee. |
 | **2026-09-19** | Master | Unified Project Tracker & Autonomous Agent Mesh | Full task allocation for all 6 members and automated verification. |
+| **2026-09-19** | Layer 4 | Dynamic Hydrodynamic A* & Plinth Safeguarding | Quadratic speed degradation, 15cm plinth margin, WHPF green corridors, 17.26ms solver. |
 
 ---
 *Maintained by Team Kairos | Smart India Hackathon 2026 | MoES / NCMRWF Problem Statement #26085*

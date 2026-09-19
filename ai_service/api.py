@@ -15,6 +15,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 
 from ai_service.layer0.pipeline import Layer0Pipeline
+from pydantic import BaseModel, Field
+from ai_service.layer4.service import Layer4Service
 
 app = FastAPI(
     title="KAIROS Layer 0 Rainfall Nowcasting API",
@@ -44,6 +46,25 @@ def get_pipeline() -> Layer0Pipeline:
     if _pipeline is None:
         _pipeline = Layer0Pipeline()
     return _pipeline
+
+_layer4_service: Optional[Layer4Service] = None
+
+def get_layer4_service() -> Layer4Service:
+    global _layer4_service
+    if _layer4_service is None:
+        # Default development configuration: uses MockLayer3Provider internally
+        _layer4_service = Layer4Service(graph_path=os.path.join(BASE_DIR, "ai_service/layer4/data/routing_graph.pkl"))
+    return _layer4_service
+
+class Coordinate(BaseModel):
+    latitude: float = Field(..., description="Latitude in decimal degrees")
+    longitude: float = Field(..., description="Longitude in decimal degrees")
+
+class RouteRequest(BaseModel):
+    vehicle_type: str = Field(..., description="Vehicle type (e.g. ambulance, passenger_car)")
+    origin: Coordinate
+    destination: Coordinate
+    departure_time: float = Field(0.0, description="Departure time in minutes from now")
 
 
 @app.get("/api/health")
@@ -137,6 +158,53 @@ def get_nowcast(
         },
         "segments": segment_depths
     }
+
+from fastapi import HTTPException
+
+@app.post("/route", tags=["Layer 4: Routing"])
+def get_route(request: RouteRequest) -> Dict[str, Any]:
+    """
+    Time-dependent A* emergency routing avoiding flood hazards.
+    """
+    try:
+        service = get_layer4_service()
+        res = service.route(
+            vehicle_type=request.vehicle_type,
+            origin_lon=request.origin.longitude,
+            origin_lat=request.origin.latitude,
+            dest_lon=request.destination.longitude,
+            dest_lat=request.destination.latitude,
+            departure_time_minutes=request.departure_time
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Layer 4 processing failed: {str(e)}")
+        
+    if res.get("status") == "FAILED":
+        reason = res.get("failure_reason", "").lower()
+        if "invalid" in reason or "not mapped" in reason:
+            raise HTTPException(status_code=400, detail=res)
+        if "no safe route" in reason or "impassable" in reason:
+            raise HTTPException(status_code=404, detail=res)
+        raise HTTPException(status_code=500, detail=res)
+        
+    return res
+
+@app.get("/assets/status", tags=["Layer 4: Critical Assets"])
+def get_asset_status() -> Dict[str, Any]:
+    """
+    Flood risk status for critical urban assets (TANGEDCO Substations).
+    """
+    try:
+        service = get_layer4_service()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Layer 4 initialization failed: {str(e)}")
+        
+    res = service.get_asset_status()
+    
+    if res.get("status") == "FAILED":
+        raise HTTPException(status_code=500, detail=res.get("error", "Unknown error fetching asset status"))
+        
+    return res
 
 
 # Mount frontend static files

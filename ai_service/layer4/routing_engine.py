@@ -12,7 +12,7 @@ import networkx as nx
 from scipy.spatial import cKDTree
 
 from ai_service.layer4.temporal_flood import TemporalFloodDepthService
-from ai_service.layer4.risk_cost_evaluator import FloodHazardEvaluator
+from ai_service.layer4.risk_cost_evaluator import FloodHazardEvaluator, VehicleRiskConfig
 
 logger = logging.getLogger(__name__)
 
@@ -143,6 +143,12 @@ class RouteResult:
     origin_snapped: str
     destination_requested: Tuple[float, float]
     destination_snapped: str
+    maximum_effective_depth: float
+    maximum_hazard_ratio: float
+    minimum_clearance: float
+    hazard_category: str
+    underpasses_used: List[str]
+    underpasses_avoided: List[str]
     nodes_explored: int
     blocked_edges: int
     failure_reason: Optional[str]
@@ -326,17 +332,20 @@ class DynamicRoutingEngine:
             # This heuristic in seconds is highly admissible.
             return dist_m / self.max_speed_m_per_s
 
-        # 3. Time-Dependent A* State Initialization
+        # Time-Dependent A* State Initialization
         # Priority Queue: (f_score, counter, node, hazard_cost_g, arrival_time_t, path_head)
-        # path_head is a linked list tuple: (current_node, segment_id, edge_geom, length, physical_time, prev_path_head)
+        # path_head is a linked list tuple: (current_node, segment_id, edge_geom, length, physical_time, effective_depth, hazard_ratio, is_underpass, prev_path_head)
         pq = []
         counter = itertools.count()
+        
+        # Track underpasses evaluated
+        underpasses_evaluated = set()
         
         # State dominance strategy: keep pareto front of (hazard_cost, arrival_time) for each node
         # A state (g, t) dominates (g', t') if g <= g' and t <= t'.
         best_states = {start_node: [(0.0, req.departure_time_minutes)]}
         
-        start_path_head = (start_node, None, None, 0.0, 0.0, None)
+        start_path_head = (start_node, None, None, 0.0, 0.0, 0.0, 0.0, False, None)
         heapq.heappush(pq, (heuristic(start_node), next(counter), start_node, 0.0, req.departure_time_minutes, start_path_head))
 
         nodes_explored = 0
@@ -363,6 +372,11 @@ class DynamicRoutingEngine:
 
             for v, edge_keys in self.G[u].items():
                 for k in edge_keys:
+                    is_underpass = self.G[u][v][k].get("is_underpass", False)
+                    segment_id = self.G[u][v][k].get("segment_id")
+                    if is_underpass and segment_id:
+                        underpasses_evaluated.add(segment_id)
+                        
                     # Time-dependent evaluation of candidate edge
                     try:
                         edge_eval = self.evaluate_candidate_edge(
@@ -397,7 +411,7 @@ class DynamicRoutingEngine:
                         best_states[v] = v_states
                         
                         edge_geom = self.G[u][v][k].get("geometry")
-                        new_path_head = (v, edge_eval.segment_id, edge_geom, edge_eval.length_m, edge_eval.physical_travel_time_seconds, path_head)
+                        new_path_head = (v, edge_eval.segment_id, edge_geom, edge_eval.length_m, edge_eval.physical_travel_time_seconds, edge_eval.effective_depth_cm, edge_eval.hazard_ratio, is_underpass, path_head)
                         
                         next_f = next_g + heuristic(v)
                         heapq.heappush(pq, (next_f, next(counter), v, next_g, next_t, new_path_head))
@@ -412,14 +426,25 @@ class DynamicRoutingEngine:
         total_dist_m = 0.0
         total_physical_time_sec = 0.0
         
+        max_eff_depth = 0.0
+        max_hazard_ratio = 0.0
+        underpasses_used = set()
+        vehicle_limit_cm = VehicleRiskConfig.get_limit_cm(req.vehicle_type)
+        min_clearance = float('inf')
+        
         curr = best_target_path
         while curr is not None:
-            node_id, seg_id, geom, length, phys_time, prev = curr
+            node_id, seg_id, geom, length, phys_time, eff_depth, hazard_ratio, is_underpass, prev = curr
             ordered_nodes.append(node_id)
             if seg_id is not None:
                 ordered_segment_ids.append(seg_id)
                 total_dist_m += length
                 total_physical_time_sec += phys_time
+                max_eff_depth = max(max_eff_depth, eff_depth)
+                max_hazard_ratio = max(max_hazard_ratio, hazard_ratio)
+                min_clearance = min(min_clearance, vehicle_limit_cm - eff_depth)
+                if is_underpass:
+                    underpasses_used.add(seg_id)
                 if geom is not None and hasattr(geom, "coords"):
                     # Append coords in reverse order because we are traversing from target to origin
                     for coord in reversed(list(geom.coords)):
@@ -445,6 +470,18 @@ class DynamicRoutingEngine:
             if not clean_geom or clean_geom[-1] != coord:
                 clean_geom.append(coord)
 
+        if min_clearance == float('inf'):
+            min_clearance = 0.0
+            
+        if max_hazard_ratio < 0.5:
+            hazard_category = "GREEN"
+        elif max_hazard_ratio <= 0.8:
+            hazard_category = "AMBER"
+        else:
+            hazard_category = "RED"
+
+        underpasses_avoided = list(underpasses_evaluated - underpasses_used)
+
         return RouteResult(
             success=True,
             ordered_nodes=ordered_nodes,
@@ -460,6 +497,12 @@ class DynamicRoutingEngine:
             origin_snapped=start_node,
             destination_requested=(req.dest_lon, req.dest_lat),
             destination_snapped=target_node,
+            maximum_effective_depth=max_eff_depth,
+            maximum_hazard_ratio=max_hazard_ratio,
+            minimum_clearance=min_clearance,
+            hazard_category=hazard_category,
+            underpasses_used=list(underpasses_used),
+            underpasses_avoided=underpasses_avoided,
             nodes_explored=nodes_explored,
             blocked_edges=blocked_edges,
             failure_reason=None
@@ -481,6 +524,12 @@ class DynamicRoutingEngine:
             origin_snapped=origin_snap.snapped_node_id if origin_snap else "",
             destination_requested=(req.dest_lon, req.dest_lat),
             destination_snapped=dest_snap.snapped_node_id if dest_snap else "",
+            maximum_effective_depth=0.0,
+            maximum_hazard_ratio=0.0,
+            minimum_clearance=0.0,
+            hazard_category="UNKNOWN",
+            underpasses_used=[],
+            underpasses_avoided=[],
             nodes_explored=explored,
             blocked_edges=blocked,
             failure_reason=reason

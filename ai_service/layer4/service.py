@@ -80,6 +80,12 @@ class Layer4Service:
             # 4. Execute safe A*
             res = self.routing_engine.solve_route(req)
             
+            # Handle infinite hazard cost for JSON serialization
+            hazard_cost = getattr(res, 'total_hazard_cost_seconds', 0.0)
+            import math
+            if math.isinf(hazard_cost):
+                hazard_cost = -1.0
+                
             # 5. Format return struct matching required contract
             return {
                 "status": "SUCCESS" if res.success else "FAILED",
@@ -89,14 +95,13 @@ class Layer4Service:
                 "total_distance_m": getattr(res, 'total_distance_m', 0.0),
                 "physical_travel_time_min": getattr(res, 'total_physical_travel_time_seconds', 0.0) / 60.0 if res.success else 0.0,
                 "eta_min": getattr(res, 'arrival_time', 0.0) if res.success else 0.0,
-                "hazard_cost": getattr(res, 'total_hazard_cost_seconds', 0.0),
-                # Explicitly missing fields from Part 6
-                "maximum_effective_depth": "NOT_IMPLEMENTED_YET",
-                "maximum_hazard_ratio": "NOT_IMPLEMENTED_YET",
-                "minimum_clearance": "NOT_IMPLEMENTED_YET",
-                "hazard_category": "NOT_IMPLEMENTED_YET",
-                "underpasses_used": "NOT_IMPLEMENTED_YET",
-                "underpasses_avoided": "NOT_IMPLEMENTED_YET",
+                "hazard_cost": hazard_cost,
+                "maximum_effective_depth": getattr(res, 'maximum_effective_depth', 0.0),
+                "maximum_hazard_ratio": getattr(res, 'maximum_hazard_ratio', 0.0),
+                "minimum_clearance": getattr(res, 'minimum_clearance', 0.0),
+                "hazard_category": getattr(res, 'hazard_category', 'UNKNOWN'),
+                "underpasses_used": getattr(res, 'underpasses_used', []),
+                "underpasses_avoided": getattr(res, 'underpasses_avoided', []),
                 "nodes_explored": getattr(res, 'nodes_explored', 0),
                 "blocked_edges": getattr(res, 'blocked_edges', 0),
                 "failure_reason": getattr(res, 'failure_reason', None)

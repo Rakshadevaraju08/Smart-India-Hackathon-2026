@@ -66,9 +66,13 @@ def test_successful_route(small_graph):
     assert res["status"] == "SUCCESS"
     assert res["total_distance_m"] == 200.0
     assert "eta_min" in res
-    assert res["maximum_effective_depth"] == "NOT_IMPLEMENTED_YET"
+    assert res["maximum_effective_depth"] == 2.0
+    assert res["maximum_hazard_ratio"] == 0.0667
+    assert res["minimum_clearance"] == 28.0
+    assert res["hazard_category"] == "GREEN"
     assert res["blocked_edges"] == 0
-    assert res["underpasses_used"] == "NOT_IMPLEMENTED_YET"
+    assert res["underpasses_used"] == []
+    assert res["underpasses_avoided"] == []
     assert res["ordered_node_ids"] == [1, 2, 3]
 
 def test_blocked_route(small_graph):

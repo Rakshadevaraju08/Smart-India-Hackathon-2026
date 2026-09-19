@@ -10,10 +10,12 @@ Exposes:
 from .impervious_extractor import ImperviousExtractor
 from .soil_hydrology import SoilHydrologyModel
 from .runoff_generator import SurfaceRunoffGenerator, RunoffResult
+from .sentinel2_processor import Sentinel2Processor
 
 __all__ = [
     "ImperviousExtractor",
     "SoilHydrologyModel",
     "SurfaceRunoffGenerator",
     "RunoffResult",
+    "Sentinel2Processor",
 ]

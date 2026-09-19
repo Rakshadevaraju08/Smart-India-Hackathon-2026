@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 class HydrologicDerivatives:
     """Calculates slope, aspect, and flow routing fields from a hydro-conditioned DEM."""
 
-    def __init__(self, output_dir: Optional[Path] = None):
-        base_dir = Path(__file__).resolve().parent.parent.parent
-        self.output_dir = output_dir or (base_dir / "Datasets" / "processed_dem")
+    def __init__(self, output_dir: Optional[Path] = None, base_dir: Optional[Path] = None):
+        self.base_dir = base_dir or Path(__file__).resolve().parent.parent.parent.parent
+        self.output_dir = output_dir or (self.base_dir / "Datasets" / "processed_dem")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def compute_all(
@@ -29,7 +29,7 @@ class HydrologicDerivatives:
         meta: Dict[str, Any],
         transform: rasterio.Affine
     ) -> Dict[str, Path]:
-        """Generate slope (m/m & deg), aspect, D8 flow direction, and flow accumulation."""
+        """Generate slope (m/m & deg), aspect, D8 flow direction, flow accumulation, and TWI."""
         cell_size = abs(transform.a)  # 30 meters metric resolution
 
         # Spatial gradients (Horn's central differences)
@@ -67,6 +67,14 @@ class HydrologicDerivatives:
         for _ in range(3):
             flow_acc += ndimage.gaussian_filter(slope_m_per_m * 10.0, sigma=1.5)
 
+        # Topographic Wetness Index (TWI = ln(a / tan(beta)))
+        # a: specific catchment area (flow_acc * cell_size in m2/m)
+        # tan(beta): hydraulic bed slope m/m (clamped to min 0.001 to avoid singularity)
+        spec_area = np.maximum(1.0, flow_acc * cell_size)
+        tan_beta = np.maximum(0.001, slope_m_per_m)
+        twi = np.log(spec_area / tan_beta)
+        twi = np.clip(twi, 0.0, 30.0)
+
         derivatives: Dict[str, Path] = {}
         m_copy = meta.copy()
 
@@ -103,5 +111,11 @@ class HydrologicDerivatives:
             dest.write(flow_acc, 1)
         derivatives["flow_accumulation"] = p_acc
 
-        logger.info("Generated 5 hydrologic derivative rasters in %s", self.output_dir)
+        # Topographic Wetness Index (TWI)
+        p_twi = self.output_dir / "chennai_twi.tif"
+        with rasterio.open(p_twi, "w", **m_copy) as dest:
+            dest.write(twi.astype(np.float32), 1)
+        derivatives["twi"] = p_twi
+
+        logger.info("Generated 6 hydrologic derivative rasters (including TWI) in %s", self.output_dir)
         return derivatives

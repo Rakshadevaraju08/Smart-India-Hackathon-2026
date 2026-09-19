@@ -56,6 +56,7 @@ class ImperviousExtractor:
         self.base_dir = base_dir or Path(__file__).resolve().parent.parent.parent.parent
         self.datasets_dir = self.base_dir / "Datasets"
         self._cached_master_df: Optional[pd.DataFrame] = None
+        self._cached_enriched_master_df: Optional[pd.DataFrame] = None
 
     def _get_base_df(self, roads_df: Optional[pd.DataFrame]) -> pd.DataFrame:
         if roads_df is not None:
@@ -99,6 +100,9 @@ class ImperviousExtractor:
         Incorporate RWH disconnection and DEM micro-topography slope adjustment.
         Fully vectorized for sub-millisecond execution over 7,894 segments.
         """
+        if roads_df is None and self._cached_enriched_master_df is not None:
+            return self._cached_enriched_master_df.copy()
+
         df = self._get_base_df(roads_df)
         n_segments = len(df)
 
@@ -111,6 +115,26 @@ class ImperviousExtractor:
 
         # 1. Base Impervious Fraction (Pavement + Urban Density)
         combined_f_imp = (0.50 * road_mods) + (0.50 * zone_baselines)
+
+        # Check if 10m Sentinel-2 raster is available to blend for the core study area
+        s2_dcia_tif = self.datasets_dir / "05_Satellite_Vaishnavi" / "Chennai_Satellite_Data_FINAL(vaishnavi)" / "satellite_data" / "lulc" / "chennai_impervious_dcia_10m.tif"
+        if s2_dcia_tif.exists() and "latitude" in df.columns and "longitude" in df.columns:
+            try:
+                from .sentinel2_processor import Sentinel2Processor
+                s2_proc = Sentinel2Processor(base_dir=self.base_dir)
+                lats = df["latitude"].values
+                lons = df["longitude"].values
+                # Sample 10m DCIA for segments within the 10x10 km AOI
+                in_aoi = (lats >= 12.9626) & (lats <= 13.0534) & (lons >= 80.1908) & (lons <= 80.2833)
+                if np.any(in_aoi):
+                    s2_sampled = s2_proc.sample_impervious_at_points(lats[in_aoi], lons[in_aoi])
+                    # Blend satellite DCIA with zonal density and road classification
+                    # Preserves high commercial CBD baseline while capturing localized satellite green/open spaces
+                    blended = (0.45 * zone_baselines[in_aoi]) + (0.40 * road_mods[in_aoi]) + (0.15 * s2_sampled)
+                    combined_f_imp[in_aoi] = np.clip(blended, 0.20, 0.98)
+                    logger.debug("Blended 10m Sentinel-2 DCIA for %d road segments in study AOI", np.count_nonzero(in_aoi))
+            except Exception as e:
+                logger.debug("Sentinel-2 blending fallback: %s", e)
 
         # 2. Chennai Municipal Rainwater Harvesting (RWH) Disconnection
         # Residential and service corridors benefit from mandatory percolation soak-pits
@@ -137,5 +161,8 @@ class ImperviousExtractor:
         df.loc[:, "building_coverage_ratio"] = np.round(bcr, 3)
         df.loc[:, "runoff_coefficient_c"] = np.round(c_composite, 3)
         df.loc[:, "manning_overland_n"] = np.round(manning_n, 4)
+
+        if roads_df is None:
+            self._cached_enriched_master_df = df.copy()
 
         return df

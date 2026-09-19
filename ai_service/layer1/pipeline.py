@@ -21,10 +21,15 @@ import numpy as np
 import pandas as pd
 import rasterio
 
-from .dem_builder import DEMBuilder, DEFAULT_CHENNAI_BOUNDS_WGS84, DEFAULT_UTM_CRS
-from .hydro_conditioner import HydroConditioner
-from .hydrologic_derivatives import HydrologicDerivatives
-from .road_sampler import RoadElevationSampler
+from .dem import (
+    DEMBuilder,
+    DEFAULT_CHENNAI_BOUNDS_WGS84,
+    DEFAULT_UTM_CRS,
+    HydroConditioner,
+    HydrologicDerivatives,
+    RoadElevationSampler,
+    SWDNetworkManager,
+)
 from .lulc import SurfaceRunoffGenerator, RunoffResult
 
 logger = logging.getLogger(__name__)
@@ -130,13 +135,19 @@ class Layer1Pipeline:
         with rasterio.open(deriv_paths["flow_accumulation"]) as acc_src:
             flow_acc = acc_src.read(1)
 
+        twi_arr = None
+        if "twi" in deriv_paths and deriv_paths["twi"].exists():
+            with rasterio.open(deriv_paths["twi"]) as twi_src:
+                twi_arr = twi_src.read(1)
+
         df_roads = self.sampler.sample_roads(
             dem=hydro_dem,
             slope=slope,
             aspect=aspect,
             flow_acc=flow_acc,
             transform=transform,
-            crs=DEFAULT_UTM_CRS
+            crs=DEFAULT_UTM_CRS,
+            twi=twi_arr
         )
         t_sample = time.perf_counter() - t0
 

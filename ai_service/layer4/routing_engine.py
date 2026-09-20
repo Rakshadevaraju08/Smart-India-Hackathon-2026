@@ -1,39 +1,22 @@
-"""Layer 4: Routing Engine - Priority-Queue Flood-Aware Shortest & Safe Path Solver.
-
-Solves multi-vehicle emergency dispatch routes:
-  1. Naive Direct Route (Dry-weather baseline, shortest geographic distance)
-  2. Standard Cutoff Dijkstra (Binary impassable filter d_e >= d_c)
-  3. Dynamic A* (Admissible Haversine heuristic + hydrodynamic speed degradation)
-  4. Kairos Green Corridor A* (A* + Water Hazard Potential Field steering around flood fronts)
-
-Calculates comparative telemetry & benchmarks:
-  - Solver latency (ms) and nodes expanded
-  - Bottlenecks avoided (submerged underpass, railway culverts, canal sags)
-  - Distance detour penalty (km) & ETA overhead vs safety trade-off (min)
-  - Clearance safety margin to active flood fronts (meters)
-  - Path linestring coordinates for GIS map rendering
 """
-
-import heapq
-import logging
+Layer 4: Routing Engine
+Foundations for time-dependent safe emergency routing.
+"""
 import math
-import time
+import heapq
+import itertools
+import logging
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
-import numpy as np
-import pandas as pd
+import networkx as nx
+from scipy.spatial import cKDTree
 
-try:
-    from ai_service.layer3.graph_builder import StreetDrainageGraph
-    from ai_service.layer4.risk_cost_evaluator import RiskCostEvaluator, VEHICLE_PROFILES
-except ImportError:
-    from ..layer3.graph_builder import StreetDrainageGraph
-    from .risk_cost_evaluator import RiskCostEvaluator, VEHICLE_PROFILES
-
+from ai_service.layer4.temporal_flood import TemporalFloodDepthService
+from ai_service.layer4.risk_cost_evaluator import FloodHazardEvaluator, VehicleRiskConfig
 
 logger = logging.getLogger(__name__)
 
-
-def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+def haversine_m(lon1: float, lat1: float, lon2: float, lat2: float) -> float:
     """Calculates great-circle distance between two points on earth in meters."""
     R = 6371000.0
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
@@ -42,537 +25,512 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     a = math.sin(dphi / 2.0)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlam / 2.0)**2
     return 2.0 * R * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
 
+@dataclass
+class SnappingResult:
+    requested_lon: float
+    requested_lat: float
+    snapped_node_id: str
+    snapping_distance_m: float
+
+@dataclass
+class EdgeEvaluationResult:
+    source_node: str
+    target_node: str
+    segment_id: str
+    arrival_time_at_edge_minutes: float
+    effective_depth_cm: float
+    hazard_ratio: float
+    is_passable: bool
+    hazard_cost_seconds: float
+    physical_travel_time_seconds: float
+    adjusted_speed_m_per_s: Optional[float]
+    next_arrival_time_minutes: float
+    length_m: float
+
+@dataclass
+class UnderpassEvaluationResult:
+    segment_id: str
+    is_underpass: bool
+    arrival_time_minutes: float
+    lookahead_minutes: float
+    arrival_effective_depth_cm: float
+    maximum_future_effective_depth_cm: float
+    vehicle_type: str
+    vehicle_limit_cm: float
+    maximum_future_hazard_ratio: float
+    is_safe: bool
+
+def evaluate_underpass_lookahead(
+    segment_id: str,
+    arrival_time_minutes: float,
+    vehicle_type: str,
+    temporal_service: TemporalFloodDepthService,
+    lookahead_minutes: float = 30.0,
+    sample_interval_minutes: float = 15.0
+) -> UnderpassEvaluationResult:
+    """
+    Evaluates flood risk for an underpass over a configurable future window.
+    Samples the forecast at regular intervals (default 15m) to capture flash flooding.
+    """
+    from ai_service.layer4.risk_cost_evaluator import VehicleRiskConfig
+    
+    limit_cm = VehicleRiskConfig.get_limit_cm(vehicle_type)
+    
+    # Helper for safe depth query
+    def safe_get_depth(t_min: float) -> float:
+        try:
+            return temporal_service.get_effective_depth(segment_id, t_min)["effective_depth_cm"]
+        except Exception as e:
+            logger.warning(f"Underpass depth query failed for {segment_id} at T={t_min}: {e}")
+            return 0.0
+            
+    # 1. Evaluate immediate arrival depth
+    arrival_depth = safe_get_depth(arrival_time_minutes)
+    
+    # 2. Sample future depths over the lookahead window
+    max_future_depth = arrival_depth
+    
+    current_sample_time = arrival_time_minutes + sample_interval_minutes
+    end_time = arrival_time_minutes + lookahead_minutes
+    
+    while current_sample_time <= end_time:
+        max_future_depth = max(max_future_depth, safe_get_depth(current_sample_time))
+        current_sample_time += sample_interval_minutes
+        
+    # Ensure the exact end of the window is also sampled if not exactly aligned
+    if (current_sample_time - sample_interval_minutes) < end_time:
+        max_future_depth = max(max_future_depth, safe_get_depth(end_time))
+        
+    hazard_ratio = max_future_depth / limit_cm
+    is_safe = hazard_ratio < 1.0
+    
+    return UnderpassEvaluationResult(
+        segment_id=segment_id,
+        is_underpass=True,
+        arrival_time_minutes=arrival_time_minutes,
+        lookahead_minutes=lookahead_minutes,
+        arrival_effective_depth_cm=arrival_depth,
+        maximum_future_effective_depth_cm=max_future_depth,
+        vehicle_type=vehicle_type,
+        vehicle_limit_cm=limit_cm,
+        maximum_future_hazard_ratio=round(hazard_ratio, 4),
+        is_safe=is_safe
+    )
+
+@dataclass
+class RouteRequest:
+    origin_lon: float
+    origin_lat: float
+    dest_lon: float
+    dest_lat: float
+    vehicle_type: str
+    departure_time_minutes: float
+    temporal_service: TemporalFloodDepthService
+
+@dataclass
+class RouteResult:
+    success: bool
+    ordered_nodes: List[str]
+    ordered_segment_ids: List[str]
+    route_geometry: List[Tuple[float, float]]
+    total_distance_m: float
+    total_physical_travel_time_seconds: float
+    total_hazard_cost_seconds: float
+    departure_time: float
+    arrival_time: float
+    vehicle_type: str
+    origin_requested: Tuple[float, float]
+    origin_snapped: str
+    destination_requested: Tuple[float, float]
+    destination_snapped: str
+    maximum_effective_depth: float
+    maximum_hazard_ratio: float
+    minimum_clearance: float
+    hazard_category: str
+    underpasses_used: List[str]
+    underpasses_avoided: List[str]
+    nodes_explored: int
+    blocked_edges: int
+    failure_reason: Optional[str]
+
 
 class DynamicRoutingEngine:
-    """Solves flood-aware emergency dispatch routes over the 7,894-node street network."""
+    def __init__(self, G: nx.MultiDiGraph):
+        if not isinstance(G, nx.MultiDiGraph):
+            raise TypeError("Expected a NetworkX MultiDiGraph")
+        self.G = G
+        self.nodes_list = list(self.G.nodes(data=True))
+        self.node_ids = [n for n, _ in self.nodes_list]
+        self._build_spatial_index()
+        
+        # Max speed in graph (for admissible heuristic)
+        self.max_speed_m_per_s = 1.0
+        for u, v, k, d in self.G.edges(data=True, keys=True):
+            speed_kmh = d.get("free_flow_speed", 15.0)
+            if speed_kmh > 0:
+                self.max_speed_m_per_s = max(self.max_speed_m_per_s, speed_kmh / 3.6)
 
-    def __init__(self, graph: Optional[StreetDrainageGraph] = None):
-        self.graph = graph or StreetDrainageGraph()
-        self.nodes_df = self.graph.nodes_df
-        self.n_nodes = len(self.nodes_df)
-        self.kdtree = self.graph.kdtree
-
-        # Precompute edge lengths and terrain slope features
-        self._precompute_graph_edges()
-
-    def _precompute_graph_edges(self):
-        """Constructs weighted edge representation from spatial adjacency."""
-        lats = self.nodes_df["latitude"].values
-        lons = self.nodes_df["longitude"].values
-
-        self.adj_with_lengths: Dict[int, List[Tuple[int, float]]] = {i: [] for i in range(self.n_nodes)}
-
-        for u, neighbors in self.graph.adjacency_list.items():
-            u_lat, u_lon = lats[u], lons[u]
-            for v in neighbors:
-                v_lat, v_lon = lats[v], lons[v]
-                dist = haversine_m(u_lat, u_lon, v_lat, v_lon)
-                # Keep distance bounded between 25m and 1200m
-                dist = max(25.0, min(1200.0, dist))
-                self.adj_with_lengths[u].append((v, dist))
-
-    def find_nearest_node(self, lat: float, lon: float) -> int:
-        """Finds nearest street node index for a given coordinate."""
-        _, idx = self.kdtree.query([lon, lat])
-        return int(idx)
-
-    def estimate_street_velocities(self, depths_cm: np.ndarray) -> np.ndarray:
-        """
-        Estimates overland flow velocities (m/s) using Manning's sheet flow equation:
-          v = (1 / n) * (d / 100)^(2/3) * S_0^(1/2)
-        where n = 0.016 for asphalt/concrete street gutters.
-        """
-        slopes = self.nodes_df.get("terrain_slope_m_per_m", pd.Series(np.full(self.n_nodes, 0.002))).values
-        slopes = np.maximum(1e-4, slopes)
-        d_m = depths_cm / 100.0
-        n_manning = 0.016
-
-        velocities = (1.0 / n_manning) * np.power(np.maximum(0.0, d_m), 2.0 / 3.0) * np.sqrt(slopes)
-        return np.clip(velocities, 0.0, 3.5)  # Cap at 3.5 m/s physical torrential limit
-
-    def compute_water_hazard_potential_field(
-        self,
-        depths_cm: np.ndarray,
-        d_critical_cm: float,
-        influence_radius_deg: float = 0.005,
-        sigma_m: float = 250.0
-    ) -> np.ndarray:
-        """
-        Builds the continuous Water Hazard Potential Field Phi_hazard(u) across all nodes:
-          Phi_hazard(u) = sum_{k in inundated} (d_k / d_c)^2 * exp(- dist(u, k)^2 / (2 * sigma^2))
-
-        Provides repulsive gradients that steer the A* search onto topological ridges
-        and bypasses advancing flood fronts before streets become submerged.
-        """
-        potential = np.zeros(self.n_nodes, dtype=np.float64)
-        inundated_indices = np.where(depths_cm > 3.0)[0]
-        if len(inundated_indices) == 0:
-            return potential
-
-        # Query inundated neighbors for all nodes within radius
-        coords = np.column_stack([self.nodes_df["longitude"].values, self.nodes_df["latitude"].values])
-        inundated_coords = coords[inundated_indices]
-        inundated_depths = depths_cm[inundated_indices]
-
-        # Use KD-tree query for fast spatial potential estimation
-        tree_inund = self.kdtree
-        # Query up to 8 nearest inundated nodes within neighborhood
-        dists, idxs = tree_inund.query(coords, k=min(6, len(inundated_indices)))
-
-        if dists.ndim == 1:
-            dists = dists[:, np.newaxis]
-            idxs = idxs[:, np.newaxis]
-
-        # Convert degree distances to approximate meters (1 deg ~ 111,000 m)
-        dists_m = dists * 111000.0
-        d_norm = depths_cm[idxs] / max(1.0, d_critical_cm)
-        gaussian_weights = np.exp(- (dists_m ** 2) / (2.0 * (sigma_m ** 2)))
-
-        potential = np.sum((d_norm ** 2) * gaussian_weights, axis=1)
-        return potential
-
-    def _dijkstra(
-        self,
-        start_idx: int,
-        target_idx: int,
-        edge_weight_fn
-    ) -> Tuple[Optional[List[int]], float, int]:
-        """Classic Dijkstra shortest path solver using min-heap priority queue."""
-        distances = {start_idx: 0.0}
-        previous = {}
-        pq = [(0.0, start_idx)]
-        visited = set()
-        nodes_expanded = 0
-
-        while pq:
-            cur_dist, u = heapq.heappop(pq)
-            if u == target_idx:
-                break
-            if u in visited:
-                continue
-            visited.add(u)
-            nodes_expanded += 1
-
-            for v, length_m in self.adj_with_lengths.get(u, []):
-                weight = edge_weight_fn(u, v, length_m)
-                if math.isinf(weight):
-                    continue
-
-                new_dist = cur_dist + weight
-                if v not in distances or new_dist < distances[v]:
-                    distances[v] = new_dist
-                    previous[v] = u
-                    heapq.heappush(pq, (new_dist, v))
-
-        if target_idx not in distances:
-            return None, float("inf"), nodes_expanded
-
-        # Reconstruct path
-        path = []
-        curr = target_idx
-        while curr in previous:
-            path.append(curr)
-            curr = previous[curr]
-        path.append(start_idx)
-        path.reverse()
-
-        return path, distances[target_idx], nodes_expanded
-
-    def _astar(
-        self,
-        start_idx: int,
-        target_idx: int,
-        edge_weight_fn,
-        evaluator: RiskCostEvaluator,
-        potential_field: Optional[np.ndarray] = None,
-        eta_hazard: float = 2.0
-    ) -> Tuple[Optional[List[int]], float, int]:
-        """
-        A* Shortest & Safe Path Solver incorporating:
-          - Dynamic Hydrodynamic Traversal Impedance
-          - Admissible Haversine Heuristic h_dist(u, target) = dist(u, target) / V_max
-          - Water Hazard Potential Field Phi_hazard(u) to guarantee green corridors
-        """
-        lats = self.nodes_df["latitude"].values
-        lons = self.nodes_df["longitude"].values
-        target_lat, target_lon = lats[target_idx], lons[target_idx]
-        v_base_mps = evaluator.base_speed_mps
-
-        # Heuristic function
-        def heuristic(u: int) -> float:
-            dist_m = haversine_m(lats[u], lons[u], target_lat, target_lon)
-            h_time_s = dist_m / v_base_mps
-            if potential_field is not None:
-                # Add repulsive potential scaled to equivalent travel time penalty
-                h_time_s += eta_hazard * float(potential_field[u]) * 10.0
-            return h_time_s
-
-        g_scores = {start_idx: 0.0}
-        previous = {}
-        # Priority queue stores (f_score, g_score, node)
-        h_start = heuristic(start_idx)
-        pq = [(h_start, 0.0, start_idx)]
-        visited = set()
-        nodes_expanded = 0
-
-        while pq:
-            f_cur, g_cur, u = heapq.heappop(pq)
-            if u == target_idx:
-                break
-            if u in visited:
-                continue
-            visited.add(u)
-            nodes_expanded += 1
-
-            for v, length_m in self.adj_with_lengths.get(u, []):
-                edge_cost_s = edge_weight_fn(u, v, length_m)
-                if math.isinf(edge_cost_s):
-                    continue
-
-                tentative_g = g_cur + edge_cost_s
-                if v not in g_scores or tentative_g < g_scores[v]:
-                    g_scores[v] = tentative_g
-                    previous[v] = u
-                    f_score = tentative_g + heuristic(v)
-                    heapq.heappush(pq, (f_score, tentative_g, v))
-
-        if target_idx not in g_scores:
-            return None, float("inf"), nodes_expanded
-
-        # Reconstruct path
-        path = []
-        curr = target_idx
-        while curr in previous:
-            path.append(curr)
-            curr = previous[curr]
-        path.append(start_idx)
-        path.reverse()
-
-        return path, g_scores[target_idx], nodes_expanded
-
-    def solve_route(
-        self,
-        origin_lat: float,
-        origin_lon: float,
-        dest_lat: float,
-        dest_lon: float,
-        depths_cm: np.ndarray,
-        vehicle_type: str = "ambulance",
-        velocities_mps: Optional[np.ndarray] = None,
-        use_hazard_potential: bool = True
-    ) -> Dict[str, Any]:
-        """
-        Computes Direct (naive) and Safe (hydrodynamic A* with Water Hazard Potential Field) routes.
-
-        Parameters:
-          origin_lat, origin_lon: Origin GPS coordinates
-          dest_lat, dest_lon: Destination GPS coordinates
-          depths_cm: Vector of current flood depths across all 7,894 road segments
-          vehicle_type: 'ambulance', 'rescue_truck', 'civilian_car', or 'two_wheeler'
-          velocities_mps: Optional flow velocity vector; estimated via Manning's formula if None
-          use_hazard_potential: If True, uses Water Hazard Potential Field to repel from flood fronts
-        """
-        t0 = time.perf_counter()
-        evaluator = RiskCostEvaluator(vehicle_type)
-
-        if velocities_mps is None:
-            velocities_mps = self.estimate_street_velocities(depths_cm)
-
-        u_start = self.find_nearest_node(origin_lat, origin_lon)
-        v_dest = self.find_nearest_node(dest_lat, dest_lon)
-
-        # 1. Solve Naive Shortest Route (Dry Distance Only via Dijkstra)
-        direct_path, _, direct_expanded = self._dijkstra(
-            u_start, v_dest,
-            edge_weight_fn=lambda u, v, length: length / evaluator.base_speed_mps
-        )
-
-        # 2. Build Water Hazard Potential Field for active flood front steering
-        potential_field = None
-        if use_hazard_potential:
-            potential_field = self.compute_water_hazard_potential_field(
-                depths_cm=depths_cm,
-                d_critical_cm=evaluator.profile.d_critical_cm
-            )
-
-        # 3. Solve Dynamic Safe Route via Hydrodynamic A* Solver
-        def safe_weight_fn(u: int, v: int, length: float) -> float:
-            d_u, d_v = depths_cm[u], depths_cm[v]
-            vel_u, vel_v = velocities_mps[u], velocities_mps[v]
-            eff_depth = max(d_u, d_v)
-            eff_vel = max(vel_u, vel_v)
-            return evaluator.compute_edge_traversal_cost(
-                length_m=length,
-                depth_cm=eff_depth,
-                velocity_mps=eff_vel,
-                enforce_cutoff=True
-            )
-
-        safe_path, _, safe_expanded = self._astar(
-            start_idx=u_start,
-            target_idx=v_dest,
-            edge_weight_fn=safe_weight_fn,
-            evaluator=evaluator,
-            potential_field=potential_field,
-            eta_hazard=2.5
-        )
-
-        # Fallback with soft penalty if strict cutoff disconnects target completely
-        if safe_path is None:
-            def soft_weight_fn(u: int, v: int, length: float) -> float:
-                eff_depth = max(depths_cm[u], depths_cm[v])
-                eff_vel = max(velocities_mps[u], velocities_mps[v])
-                return evaluator.compute_edge_traversal_cost(
-                    length_m=length,
-                    depth_cm=eff_depth,
-                    velocity_mps=eff_vel,
-                    enforce_cutoff=False
-                )
-
-            safe_path, _, safe_expanded = self._astar(
-                start_idx=u_start,
-                target_idx=v_dest,
-                edge_weight_fn=soft_weight_fn,
-                evaluator=evaluator,
-                potential_field=potential_field,
-                eta_hazard=1.0
-            )
-
-        elapsed_ms = (time.perf_counter() - t0) * 1000.0
-
-        # Assemble route analytics
-        direct_res = self._analyze_path(direct_path, depths_cm, velocities_mps, evaluator) if direct_path else None
-        safe_res = self._analyze_path(safe_path, depths_cm, velocities_mps, evaluator) if safe_path else None
-
-        # Compare overhead
-        if direct_res and safe_res:
-            detour_extra_km = max(0.0, round(safe_res["distance_km"] - direct_res["distance_km"], 2))
-            detour_extra_min = max(0.0, round(safe_res["eta_min"] - direct_res["eta_min"], 1))
-            detour_overhead_pct = round((detour_extra_km / max(0.1, direct_res["distance_km"])) * 100.0, 1)
-        else:
-            detour_extra_km = 0.0
-            detour_extra_min = 0.0
-            detour_overhead_pct = 0.0
-
-        return {
-            "origin": {"lat": origin_lat, "lon": origin_lon, "nearest_node": u_start},
-            "destination": {"lat": dest_lat, "lon": dest_lon, "nearest_node": v_dest},
-            "vehicle_type": vehicle_type,
-            "vehicle_name": evaluator.profile.name,
-            "clearance_threshold_cm": evaluator.profile.d_critical_cm,
-            "latency_ms": round(elapsed_ms, 2),
-            "nodes_expanded": {
-                "direct_dijkstra": direct_expanded,
-                "safe_astar_whpf": safe_expanded
-            },
-            "direct_route": direct_res,
-            "safe_route": safe_res,
-            "detour_extra_km": detour_extra_km,
-            "detour_extra_min": detour_extra_min,
-            "detour_overhead_pct": detour_overhead_pct,
-            "safety_gain": {
-                "bottlenecks_avoided": (direct_res["impassable_segments"] if direct_res else 0) - (safe_res["impassable_segments"] if safe_res else 0),
-                "depth_reduction_cm": round((direct_res["max_depth_cm"] if direct_res else 0) - (safe_res["max_depth_cm"] if safe_res else 0), 1)
-            }
-        }
-
-    def _analyze_path(
-        self,
-        path: List[int],
-        depths_cm: np.ndarray,
-        velocities_mps: np.ndarray,
-        evaluator: RiskCostEvaluator
-    ) -> Dict[str, Any]:
-        """Extracts detailed segment statistics and linestring coordinates along a path."""
-        lats = self.nodes_df["latitude"].values
-        lons = self.nodes_df["longitude"].values
-        names = self.nodes_df.get("road_name", pd.Series(["Street"] * self.n_nodes)).values
-
+    def _build_spatial_index(self):
         coords = []
-        total_dist_m = 0.0
-        total_time_min = 0.0
-        max_depth = 0.0
-        max_velocity = 0.0
-        impassable_count = 0
-        bottleneck_info = None
+        for n, data in self.nodes_list:
+            coord = data.get("coordinates")
+            if coord and len(coord) >= 2:
+                # Scipy KDTree expects (x, y) = (lon, lat)
+                coords.append([coord[0], coord[1]])
+            else:
+                coords.append([0.0, 0.0]) # Fallback (should not happen in valid graph)
+        self.kdtree = cKDTree(coords)
 
-        for i in range(len(path)):
-            u = path[i]
-            lat, lon = float(lats[u]), float(lons[u])
-            coords.append([lat, lon])
-            d = float(depths_cm[u])
-            v = float(velocities_mps[u]) if velocities_mps is not None else 0.0
-
-            if d > max_depth:
-                max_depth = d
-                bottleneck_info = {
-                    "node_idx": u,
-                    "name": str(names[u]),
-                    "depth_cm": round(d, 1),
-                    "velocity_mps": round(v, 2),
-                    "lat": lat,
-                    "lon": lon
-                }
-
-            if v > max_velocity:
-                max_velocity = v
-
-            # Check impassability (depth or momentum hazard)
-            if d >= evaluator.profile.d_critical_cm or ((d / 100.0) * v) >= evaluator.profile.critical_dv_m2_s:
-                impassable_count += 1
-
-            if i < len(path) - 1:
-                v_node = path[i + 1]
-                dist = haversine_m(lat, lon, float(lats[v_node]), float(lons[v_node]))
-                total_dist_m += dist
-                seg_time = evaluator.estimate_travel_time_min(dist, d, v)
-                if not math.isinf(seg_time):
-                    total_time_min += seg_time
-                else:
-                    total_time_min += (dist / max(1.0, evaluator.base_speed_mps * 0.1)) / 60.0
-
-        is_safe = impassable_count == 0
-        status = "SAFE_PASSABLE" if is_safe else "IMPASSABLE_HAZARD"
-
-        return {
-            "status": status,
-            "is_safe": is_safe,
-            "distance_km": round(total_dist_m / 1000.0, 2),
-            "eta_min": round(total_time_min, 1),
-            "max_depth_cm": round(max_depth, 1),
-            "max_velocity_mps": round(max_velocity, 2),
-            "impassable_segments": impassable_count,
-            "total_nodes": len(path),
-            "bottleneck": bottleneck_info,
-            "coords": coords
-        }
-
-    def benchmark_routing_algorithms(
-        self,
-        origin_lat: float,
-        origin_lon: float,
-        dest_lat: float,
-        dest_lon: float,
-        depths_cm: np.ndarray,
-        vehicle_type: str = "ambulance"
-    ) -> Dict[str, Any]:
+    def snap_to_node(self, node_id_or_lon: Any, lat: Optional[float] = None) -> SnappingResult:
         """
-        Executes empirical benchmark comparison between 4 routing architectures:
-          1. Dijkstra Naive Shortest Distance (Baseline, flood-blind)
-          2. Dijkstra with Strict Cutoff (Binary pass/fail filter)
-          3. Standard A* with Hydrodynamic Travel Cost (Admissible Haversine heuristic)
-          4. Kairos Green Corridor A* (A* + Water Hazard Potential Field)
+        Snaps an origin/destination to the nearest valid routing graph node.
+        Accepts either an explicit node ID (string) or (lon, lat) coordinates.
         """
-        evaluator = RiskCostEvaluator(vehicle_type)
-        velocities_mps = self.estimate_street_velocities(depths_cm)
-        u_start = self.find_nearest_node(origin_lat, origin_lon)
-        v_dest = self.find_nearest_node(dest_lat, dest_lon)
-
-        # 1. Dijkstra Naive Shortest Distance
-        t0 = time.perf_counter()
-        p1, _, n1 = self._dijkstra(
-            u_start, v_dest,
-            edge_weight_fn=lambda u, v, l: l / evaluator.base_speed_mps
-        )
-        lat1 = (time.perf_counter() - t0) * 1000.0
-        res1 = self._analyze_path(p1, depths_cm, velocities_mps, evaluator) if p1 else None
-
-        # 2. Dijkstra with Strict Cutoff
-        t0 = time.perf_counter()
-        p2, _, n2 = self._dijkstra(
-            u_start, v_dest,
-            edge_weight_fn=lambda u, v, l: (
-                float("inf") if max(depths_cm[u], depths_cm[v]) >= evaluator.profile.d_critical_cm
-                else l / evaluator.base_speed_mps
+        if isinstance(node_id_or_lon, str) and lat is None:
+            node_id = node_id_or_lon
+            if node_id not in self.G.nodes:
+                raise ValueError(f"Invalid node ID requested: {node_id}")
+            node_data = self.G.nodes[node_id]
+            lon, lat_val = node_data["coordinates"][0], node_data["coordinates"][1]
+            return SnappingResult(
+                requested_lon=lon,
+                requested_lat=lat_val,
+                snapped_node_id=node_id,
+                snapping_distance_m=0.0
             )
+            
+        if not isinstance(node_id_or_lon, (int, float)) or not isinstance(lat, (int, float)):
+            raise ValueError("Invalid coordinates provided.")
+            
+        lon = float(node_id_or_lon)
+        lat = float(lat)
+        
+        if not (-180.0 <= lon <= 180.0) or not (-90.0 <= lat <= 90.0):
+            raise ValueError("Coordinates out of bounds.")
+            
+        _, idx = self.kdtree.query([lon, lat])
+        snapped_node_id = self.node_ids[idx]
+        
+        node_data = self.G.nodes[snapped_node_id]
+        snapped_lon, snapped_lat = node_data["coordinates"][0], node_data["coordinates"][1]
+        
+        distance_m = haversine_m(lon, lat, snapped_lon, snapped_lat)
+        
+        return SnappingResult(
+            requested_lon=lon,
+            requested_lat=lat,
+            snapped_node_id=snapped_node_id,
+            snapping_distance_m=distance_m
         )
-        lat2 = (time.perf_counter() - t0) * 1000.0
-        res2 = self._analyze_path(p2, depths_cm, velocities_mps, evaluator) if p2 else None
-
-        # 3. Standard A* with Hydrodynamic Traversal Cost
-        t0 = time.perf_counter()
-        def hydro_weight_fn(u: int, v: int, l: float) -> float:
-            eff_d = max(depths_cm[u], depths_cm[v])
-            eff_v = max(velocities_mps[u], velocities_mps[v])
-            return evaluator.compute_edge_traversal_cost(l, eff_d, eff_v, enforce_cutoff=True)
-
-        p3, _, n3 = self._astar(
-            start_idx=u_start,
-            target_idx=v_dest,
-            edge_weight_fn=hydro_weight_fn,
-            evaluator=evaluator,
-            potential_field=None
+        
+    def evaluate_candidate_edge(
+        self, 
+        u_node: str, 
+        v_node: str, 
+        edge_key: int, 
+        arrival_time_minutes: float, 
+        vehicle_type: str, 
+        temporal_service: TemporalFloodDepthService
+    ) -> EdgeEvaluationResult:
+        """
+        Evaluates a single candidate edge at a specific arrival time.
+        Delegates flood prediction to Part 3 and hazard evaluation to Part 4.
+        """
+        if u_node not in self.G or v_node not in self.G[u_node] or edge_key not in self.G[u_node][v_node]:
+            raise ValueError("Invalid edge specified.")
+            
+        edge_data = self.G[u_node][v_node][edge_key]
+        segment_id = edge_data.get("segment_id")
+        length_m = edge_data.get("length_m", 1.0)
+        speed_kmh = edge_data.get("free_flow_speed", 15.0)
+        
+        if not segment_id:
+            raise ValueError("Edge is missing segment_id.")
+            
+        # 1. Ask Part 3 for effective depth at the precise arrival time
+        try:
+            temp_res = temporal_service.get_effective_depth(segment_id, arrival_time_minutes)
+            effective_depth_cm = temp_res["effective_depth_cm"]
+        except Exception as e:
+            logger.warning(f"Depth query failed for {segment_id}: {e}")
+            effective_depth_cm = 0.0
+            
+        # 2. Ask Part 4 to evaluate the vehicle risk and WHPF cost
+        risk_res = FloodHazardEvaluator.evaluate_road_risk(
+            segment_id=segment_id,
+            length_m=length_m,
+            free_flow_speed_kmh=speed_kmh,
+            effective_depth_cm=effective_depth_cm,
+            vehicle_type=vehicle_type
         )
-        lat3 = (time.perf_counter() - t0) * 1000.0
-        res3 = self._analyze_path(p3, depths_cm, velocities_mps, evaluator) if p3 else None
-
-        # 4. Kairos Green Corridor A* (A* + WHPF)
-        t0 = time.perf_counter()
-        whpf = self.compute_water_hazard_potential_field(depths_cm, evaluator.profile.d_critical_cm)
-        p4, _, n4 = self._astar(
-            start_idx=u_start,
-            target_idx=v_dest,
-            edge_weight_fn=hydro_weight_fn,
-            evaluator=evaluator,
-            potential_field=whpf,
-            eta_hazard=2.5
+        
+        # 3. Underpass Future-Window Check
+        is_underpass = edge_data.get("is_underpass", False)
+        if is_underpass and risk_res["is_passable"]:
+            underpass_eval = evaluate_underpass_lookahead(
+                segment_id=segment_id,
+                arrival_time_minutes=arrival_time_minutes,
+                vehicle_type=vehicle_type,
+                temporal_service=temporal_service,
+                lookahead_minutes=30.0,
+                sample_interval_minutes=15.0
+            )
+            if not underpass_eval.is_safe:
+                # If unsafe in the future window, treat as immediately blocked
+                risk_res["is_passable"] = False
+                risk_res["hazard_cost_seconds"] = float('inf')
+                risk_res["actual_travel_time_seconds"] = float('inf')
+        
+        # 4. Calculate next arrival time
+        if risk_res["is_passable"]:
+            next_arrival_time = arrival_time_minutes + (risk_res["actual_travel_time_seconds"] / 60.0)
+        else:
+            next_arrival_time = float('inf')
+            
+        return EdgeEvaluationResult(
+            source_node=u_node,
+            target_node=v_node,
+            segment_id=segment_id,
+            arrival_time_at_edge_minutes=arrival_time_minutes,
+            effective_depth_cm=effective_depth_cm,
+            hazard_ratio=risk_res["hazard_ratio"],
+            is_passable=risk_res["is_passable"],
+            hazard_cost_seconds=risk_res["hazard_cost_seconds"],
+            physical_travel_time_seconds=risk_res["actual_travel_time_seconds"],
+            adjusted_speed_m_per_s=risk_res.get("adjusted_speed_m_per_s"),
+            next_arrival_time_minutes=next_arrival_time,
+            length_m=length_m
         )
-        lat4 = (time.perf_counter() - t0) * 1000.0
-        res4 = self._analyze_path(p4, depths_cm, velocities_mps, evaluator) if p4 else None
 
-        algorithms = [
-            {
-                "algorithm": "Dijkstra Naive Shortest Distance",
-                "flood_aware": False,
-                "latency_ms": round(lat1, 2),
-                "nodes_expanded": n1,
-                "distance_km": res1["distance_km"] if res1 else 0.0,
-                "eta_min": res1["eta_min"] if res1 else 0.0,
-                "max_depth_cm": res1["max_depth_cm"] if res1 else 0.0,
-                "impassable_segments": res1["impassable_segments"] if res1 else 0,
-                "status": res1["status"] if res1 else "NO_ROUTE"
-            },
-            {
-                "algorithm": "Dijkstra Binary Cutoff",
-                "flood_aware": True,
-                "latency_ms": round(lat2, 2),
-                "nodes_expanded": n2,
-                "distance_km": res2["distance_km"] if res2 else 0.0,
-                "eta_min": res2["eta_min"] if res2 else 0.0,
-                "max_depth_cm": res2["max_depth_cm"] if res2 else 0.0,
-                "impassable_segments": res2["impassable_segments"] if res2 else 0,
-                "status": res2["status"] if res2 else "NO_ROUTE"
-            },
-            {
-                "algorithm": "Standard A* Hydrodynamic",
-                "flood_aware": True,
-                "latency_ms": round(lat3, 2),
-                "nodes_expanded": n3,
-                "distance_km": res3["distance_km"] if res3 else 0.0,
-                "eta_min": res3["eta_min"] if res3 else 0.0,
-                "max_depth_cm": res3["max_depth_cm"] if res3 else 0.0,
-                "impassable_segments": res3["impassable_segments"] if res3 else 0,
-                "status": res3["status"] if res3 else "NO_ROUTE"
-            },
-            {
-                "algorithm": "Kairos Green Corridor A* (A* + WHPF)",
-                "flood_aware": True,
-                "latency_ms": round(lat4, 2),
-                "nodes_expanded": n4,
-                "distance_km": res4["distance_km"] if res4 else 0.0,
-                "eta_min": res4["eta_min"] if res4 else 0.0,
-                "max_depth_cm": res4["max_depth_cm"] if res4 else 0.0,
-                "impassable_segments": res4["impassable_segments"] if res4 else 0,
-                "status": res4["status"] if res4 else "NO_ROUTE"
-            }
-        ]
+    def solve_route(self, req: RouteRequest) -> RouteResult:
+        """
+        Time-dependent A* safe routing algorithm.
+        Minimizes Accumulated WHPF Hazard Cost.
+        """
+        # 1. Origin / Destination Snapping
+        try:
+            origin_snap = self.snap_to_node(req.origin_lon, req.origin_lat)
+            dest_snap = self.snap_to_node(req.dest_lon, req.dest_lat)
+        except ValueError as e:
+            return self._build_failure_result(req, str(e))
 
-        return {
-            "vehicle_type": vehicle_type,
-            "vehicle_name": evaluator.profile.name,
-            "clearance_cm": evaluator.profile.d_critical_cm,
-            "origin_node": u_start,
-            "dest_node": v_dest,
-            "benchmark_results": algorithms
-        }
+        start_node = origin_snap.snapped_node_id
+        target_node = dest_snap.snapped_node_id
+        
+        if start_node == target_node:
+            return self._build_failure_result(req, "Origin and Destination snapped to the same node.")
 
+        dest_data = self.G.nodes[target_node]
+        dest_lon, dest_lat = dest_data["coordinates"][0], dest_data["coordinates"][1]
+
+        # 2. Heuristic
+        def heuristic(u_node: str) -> float:
+            u_data = self.G.nodes[u_node]
+            dist_m = haversine_m(u_data["coordinates"][0], u_data["coordinates"][1], dest_lon, dest_lat)
+            # Admissible heuristic: time to travel straight line at maximum theoretical network speed
+            # Since g is hazard_cost (which is bounded below by physical travel time when r=0)
+            # This heuristic in seconds is highly admissible.
+            return dist_m / self.max_speed_m_per_s
+
+        # Time-Dependent A* State Initialization
+        # Priority Queue: (f_score, counter, node, hazard_cost_g, arrival_time_t, path_head)
+        # path_head is a linked list tuple: (current_node, segment_id, edge_geom, length, physical_time, effective_depth, hazard_ratio, is_underpass, prev_path_head)
+        pq = []
+        counter = itertools.count()
+        
+        # Track underpasses evaluated
+        underpasses_evaluated = set()
+        
+        # State dominance strategy: keep pareto front of (hazard_cost, arrival_time) for each node
+        # A state (g, t) dominates (g', t') if g <= g' and t <= t'.
+        best_states = {start_node: [(0.0, req.departure_time_minutes)]}
+        
+        start_path_head = (start_node, None, None, 0.0, 0.0, 0.0, 0.0, False, None)
+        heapq.heappush(pq, (heuristic(start_node), next(counter), start_node, 0.0, req.departure_time_minutes, start_path_head))
+
+        nodes_explored = 0
+        blocked_edges = 0
+        best_target_path = None
+        best_target_cost = float('inf')
+
+        # 4. A* Search Loop
+        while pq:
+            f, _, u, g, t, path_head = heapq.heappop(pq)
+
+            if u == target_node:
+                if g < best_target_cost:
+                    best_target_cost = g
+                    best_target_path = path_head
+                # We do not immediately break because another path might arrive earlier with slightly worse hazard cost? 
+                # A* guarantees first popped target has lowest f, and since h(target)=0, lowest f = lowest g.
+                # So we can safely break and return the lowest hazard cost path.
+                break
+
+            # If this state is strictly dominated by another popped state, it is redundant, 
+            # but since we filter on push, we just proceed.
+            nodes_explored += 1
+
+            for v, edge_keys in self.G[u].items():
+                for k in edge_keys:
+                    is_underpass = self.G[u][v][k].get("is_underpass", False)
+                    segment_id = self.G[u][v][k].get("segment_id")
+                    if is_underpass and segment_id:
+                        underpasses_evaluated.add(segment_id)
+                        
+                    # Time-dependent evaluation of candidate edge
+                    try:
+                        edge_eval = self.evaluate_candidate_edge(
+                            u_node=u,
+                            v_node=v,
+                            edge_key=k,
+                            arrival_time_minutes=t,
+                            vehicle_type=req.vehicle_type,
+                            temporal_service=req.temporal_service
+                        )
+                    except ValueError:
+                        continue
+                        
+                    if not edge_eval.is_passable:
+                        blocked_edges += 1
+                        continue
+                        
+                    next_g = g + edge_eval.hazard_cost_seconds
+                    next_t = edge_eval.next_arrival_time_minutes
+                    
+                    # Dominance check
+                    v_states = best_states.get(v, [])
+                    is_dominated = False
+                    for existing_g, existing_t in v_states:
+                        if existing_g <= next_g and existing_t <= next_t:
+                            is_dominated = True
+                            break
+                            
+                    if not is_dominated:
+                        # Keep this state
+                        v_states.append((next_g, next_t))
+                        best_states[v] = v_states
+                        
+                        edge_geom = self.G[u][v][k].get("geometry")
+                        new_path_head = (v, edge_eval.segment_id, edge_geom, edge_eval.length_m, edge_eval.physical_travel_time_seconds, edge_eval.effective_depth_cm, edge_eval.hazard_ratio, is_underpass, path_head)
+                        
+                        next_f = next_g + heuristic(v)
+                        heapq.heappush(pq, (next_f, next(counter), v, next_g, next_t, new_path_head))
+
+        # 5. Route Reconstruction
+        if best_target_path is None:
+            return self._build_failure_result(req, "No safe route found.", origin_snap, dest_snap, nodes_explored, blocked_edges)
+
+        ordered_nodes = []
+        ordered_segment_ids = []
+        route_geometry = []
+        total_dist_m = 0.0
+        total_physical_time_sec = 0.0
+        
+        max_eff_depth = 0.0
+        max_hazard_ratio = 0.0
+        underpasses_used = set()
+        vehicle_limit_cm = VehicleRiskConfig.get_limit_cm(req.vehicle_type)
+        min_clearance = float('inf')
+        
+        curr = best_target_path
+        while curr is not None:
+            node_id, seg_id, geom, length, phys_time, eff_depth, hazard_ratio, is_underpass, prev = curr
+            ordered_nodes.append(node_id)
+            if seg_id is not None:
+                ordered_segment_ids.append(seg_id)
+                total_dist_m += length
+                total_physical_time_sec += phys_time
+                max_eff_depth = max(max_eff_depth, eff_depth)
+                max_hazard_ratio = max(max_hazard_ratio, hazard_ratio)
+                min_clearance = min(min_clearance, vehicle_limit_cm - eff_depth)
+                if is_underpass:
+                    underpasses_used.add(seg_id)
+                if geom is not None and hasattr(geom, "coords"):
+                    # Append coords in reverse order because we are traversing from target to origin
+                    for coord in reversed(list(geom.coords)):
+                        route_geometry.append(coord)
+                else:
+                    # Fallback to node coordinates
+                    node_coords = self.G.nodes[node_id]["coordinates"]
+                    route_geometry.append((node_coords[0], node_coords[1]))
+            else:
+                # Origin node fallback
+                node_coords = self.G.nodes[node_id]["coordinates"]
+                route_geometry.append((node_coords[0], node_coords[1]))
+                
+            curr = prev
+
+        ordered_nodes.reverse()
+        ordered_segment_ids.reverse()
+        route_geometry.reverse()
+        
+        # Deduplicate sequential identical coordinates in geometry
+        clean_geom = []
+        for coord in route_geometry:
+            if not clean_geom or clean_geom[-1] != coord:
+                clean_geom.append(coord)
+
+        if min_clearance == float('inf'):
+            min_clearance = 0.0
+            
+        if max_hazard_ratio < 0.5:
+            hazard_category = "GREEN"
+        elif max_hazard_ratio <= 0.8:
+            hazard_category = "AMBER"
+        else:
+            hazard_category = "RED"
+
+        underpasses_avoided = list(underpasses_evaluated - underpasses_used)
+
+        return RouteResult(
+            success=True,
+            ordered_nodes=ordered_nodes,
+            ordered_segment_ids=ordered_segment_ids,
+            route_geometry=clean_geom,
+            total_distance_m=total_dist_m,
+            total_physical_travel_time_seconds=total_physical_time_sec,
+            total_hazard_cost_seconds=best_target_cost,
+            departure_time=req.departure_time_minutes,
+            arrival_time=req.departure_time_minutes + (total_physical_time_sec / 60.0),
+            vehicle_type=req.vehicle_type,
+            origin_requested=(req.origin_lon, req.origin_lat),
+            origin_snapped=start_node,
+            destination_requested=(req.dest_lon, req.dest_lat),
+            destination_snapped=target_node,
+            maximum_effective_depth=max_eff_depth,
+            maximum_hazard_ratio=max_hazard_ratio,
+            minimum_clearance=min_clearance,
+            hazard_category=hazard_category,
+            underpasses_used=list(underpasses_used),
+            underpasses_avoided=underpasses_avoided,
+            nodes_explored=nodes_explored,
+            blocked_edges=blocked_edges,
+            failure_reason=None
+        )
+
+    def _build_failure_result(self, req: RouteRequest, reason: str, origin_snap: Optional[SnappingResult] = None, dest_snap: Optional[SnappingResult] = None, explored: int = 0, blocked: int = 0) -> RouteResult:
+        return RouteResult(
+            success=False,
+            ordered_nodes=[],
+            ordered_segment_ids=[],
+            route_geometry=[],
+            total_distance_m=0.0,
+            total_physical_travel_time_seconds=0.0,
+            total_hazard_cost_seconds=float('inf'),
+            departure_time=req.departure_time_minutes,
+            arrival_time=float('inf'),
+            vehicle_type=req.vehicle_type,
+            origin_requested=(req.origin_lon, req.origin_lat),
+            origin_snapped=origin_snap.snapped_node_id if origin_snap else "",
+            destination_requested=(req.dest_lon, req.dest_lat),
+            destination_snapped=dest_snap.snapped_node_id if dest_snap else "",
+            maximum_effective_depth=0.0,
+            maximum_hazard_ratio=0.0,
+            minimum_clearance=0.0,
+            hazard_category="UNKNOWN",
+            underpasses_used=[],
+            underpasses_avoided=[],
+            nodes_explored=explored,
+            blocked_edges=blocked,
+            failure_reason=reason
+        )

@@ -26,6 +26,15 @@ A thorough investigation of existing project files and official public internet 
 1. **Plinth Elevations:** The most critical limitation is the absence of official substation plinth heights (`plinth_height_m`). The legacy codebase contained arbitrary guesses (ranging from 40cm to 65cm). Because inventing data is strictly prohibited, the `substations.csv` file currently maps all plinth heights to empty/null. The future monitor algorithm must be designed to gracefully handle null plinths (e.g., using a worst-case default or alerting the operator).
 2. **Authoritative Master Files:** No single, downloadable master CSV/PDF exists on the TANTRANSCO websites. The dataset had to be synthesized by cross-referencing OSM geospatial records with known TNEB infrastructure names.
 
+## Plinth Height Research
+
+Extensive web research was conducted to locate authoritative engineering values for plinth heights (see `PLINTH_DOCUMENT_RESEARCH.md`). 
+
+**Findings:**
+* Public web research did not locate verified engineering drawings, tender BOQs, or official documentation containing the required values.
+* The required data is locked inside archived PDF attachments on portals like tntenders.gov.in that cannot be publicly indexed or bulk-searched.
+* **Important Distinction:** The `ground_elevation_m` provided is a DEM-derived estimation of the bare earth surface. It must **not** be used as a substitute for `plinth_height_m`, which is the authoritative engineering height of the concrete base protecting the equipment. Currently, authoritative plinth heights are **unavailable**.
+
 ## Recommended Future Work
 
 1. **Obtain Official Plinth Elevations:** It is strongly recommended to file an RTI (Right to Information) request with TANTRANSCO or consult with TANGEDCO civil engineers to obtain the true sea-level (MSL) elevation and plinth height of the 20 critical substations.
